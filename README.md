@@ -15,4 +15,4 @@ Rust uchun qayta ishlatiladigan type va value object'lar kutubxonasi.
 
 ```toml
 [dependencies]
-uz-types = "0.1"
+uz-types = "0.2"
