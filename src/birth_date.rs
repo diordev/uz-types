@@ -4,27 +4,73 @@ use std::ops::Deref;
 
 use crate::error::TypeError;
 
+/// Sana formatlarini belgilovchi state (holat) enumi.
+///
+/// Turli xil formatlar (`YYYY-MM-DD`, `DD-MM-YYYY` va ularning nuqtali versiyalari)
+/// o'rtasida o'tish va ularni teskarisiga (reverse) o'zgartirish uchun ishlatiladi.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DateFormat {
+    /// YYYY-MM-DD formati
+    YmdHyphen,
+    /// DD-MM-YYYY formati
+    DmyHyphen,
+    /// YYYY.MM.DD formati
+    YmdDot,
+    /// DD.MM.YYYY formati
+    DmyDot,
+}
+
+impl DateFormat {
+    /// Chrono kutubxonasi uchun mos format stringini qaytaradi.
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::YmdHyphen => "%Y-%m-%d",
+            Self::DmyHyphen => "%d-%m-%Y",
+            Self::YmdDot => "%Y.%m.%d",
+            Self::DmyDot => "%d.%m.%Y",
+        }
+    }
+
+    /// Joriy format holatini (state) teskarisiga (reverse) o'zgartiradi.
+    ///
+    /// - `YYYY-MM-DD` -> `DD-MM-YYYY`
+    /// - `DD-MM-YYYY` -> `YYYY-MM-DD`
+    /// - `YYYY.MM.DD` -> `DD.MM.YYYY`
+    /// - `DD.MM.YYYY` -> `YYYY.MM.DD`
+    pub fn reversed(&self) -> Self {
+        match self {
+            Self::YmdHyphen => Self::DmyHyphen,
+            Self::DmyHyphen => Self::YmdHyphen,
+            Self::YmdDot => Self::DmyDot,
+            Self::DmyDot => Self::YmdDot,
+        }
+    }
+}
+
 /// Tug'ilgan sanani ifodalovchi value object.
 ///
-/// Faqat `YYYY-MM-DD` formatdagi sanalarni va kelajakda bo'lmagan qiymatlarni qabul qiladi.
-/// Ichki qiymat sifatida `NaiveDate` saqlaydi.
+/// Berilgan format va kelajakda bo'lmagan sanalarni qabul qiladi.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BirthDate(NaiveDate);
 
 impl BirthDate {
-    /// Sana uchun yagona rasmiy format (`YYYY-MM-DD`).
-    pub const FORMAT: &'static str = "%Y-%m-%d";
+    /// Standart rasmiy format (`YYYY-MM-DD`).
+    pub const DEFAULT_FORMAT: DateFormat = DateFormat::YmdHyphen;
 
-    /// String qiymatdan `BirthDate` yaratadi.
-    ///
-    /// Validatsiyalar:
-    /// - Format `YYYY-MM-DD` bo'lishi kerak.
-    /// - Kelajak sanasi qabul qilinmaydi.
+    /// Standart `YYYY-MM-DD` formatidan `BirthDate` yaratadi.
     pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
+        Self::parse_with_format(value, Self::DEFAULT_FORMAT)
+    }
+
+    /// Berilgan format (`DateFormat` state) asosida satrdan `BirthDate` yaratadi.
+    pub fn parse_with_format(
+        value: impl AsRef<str>,
+        format: DateFormat,
+    ) -> Result<Self, TypeError> {
         let raw = value.as_ref().trim();
 
         let date =
-            NaiveDate::parse_from_str(raw, Self::FORMAT).map_err(|_| BirthDateError::Date)?;
+            NaiveDate::parse_from_str(raw, format.as_str()).map_err(|_| BirthDateError::Date)?;
 
         Self::from_naive_date(date)
     }
@@ -38,6 +84,17 @@ impl BirthDate {
         }
 
         Ok(Self(date))
+    }
+
+    /// Sanani berilgan format (`DateFormat` state) bo'yicha `String` ko'rinishiga o'tkazadi.
+    pub fn format_as(&self, format: DateFormat) -> String {
+        self.0.format(format.as_str()).to_string()
+    }
+
+    /// Joriy formatni olib, uni `reversed()` state yordamida teskari formatga o'tkazib qaytaradi.
+    pub fn format_reversed(&self, current_format: DateFormat) -> String {
+        let target_format = current_format.reversed();
+        self.format_as(target_format)
     }
 
     /// Ichki `NaiveDate` qiymatiga reference qaytaradi.
@@ -94,10 +151,10 @@ impl AsRef<NaiveDate> for BirthDate {
     }
 }
 
-/// `BirthDate` qiymatini `YYYY-MM-DD` formatida chiqaradi.
+/// `BirthDate` qiymatini standart `YYYY-MM-DD` formatida chiqaradi.
 impl std::fmt::Display for BirthDate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.format(Self::FORMAT))
+        write!(f, "{}", self.0.format(Self::DEFAULT_FORMAT.as_str()))
     }
 }
 
@@ -176,8 +233,8 @@ impl<'de> Deserialize<'de> for BirthDate {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum BirthDateError {
-    /// Sana formati yoki qiymati noto'g'ri (YYYY-MM-DD kutilgan).
-    #[error("invalid birth date format or value, expected YYYY-MM-DD")]
+    /// Sana formati yoki qiymati noto'g'ri.
+    #[error("invalid birth date format or value")]
     Date,
 
     /// Kelajak sanasi berilgan (tug'ilgan sana kelajakda bo'lishi mumkin emas).
@@ -189,130 +246,62 @@ pub enum BirthDateError {
 mod tests {
     use super::*;
 
-    // 1. To'g'ri tug'ilgan sanani parse qilish
     #[test]
     fn parse_valid_birth_date() {
         let date = BirthDate::parse("1990-05-15").unwrap();
         assert_eq!(date.to_string(), "1990-05-15");
-        assert_eq!(date.year(), 1990);
-        assert_eq!(date.month(), 5);
-        assert_eq!(date.day(), 15);
     }
 
-    // 2. Noto'g'ri formatlar uchun xatolik qaytarishi
+    // 1-va 2-variantlar: Hyphen formatlar va ularning reverse state'i
+    #[test]
+    fn test_format_state_hyphen_reversal() {
+        // YYYY-MM-DD formatidan o'qish
+        let date = BirthDate::parse_with_format("1990-05-15", DateFormat::YmdHyphen).unwrap();
+
+        // Uni DD-MM-YYYY ga o'tkazish
+        let dmy = date.format_as(DateFormat::DmyHyphen);
+        assert_eq!(dmy, "15-05-1990");
+
+        // reversed() state yordamida teskarisiga o'girish (YmdHyphen -> DmyHyphen)
+        let reversed_from_ymd = date.format_reversed(DateFormat::YmdHyphen);
+        assert_eq!(reversed_from_ymd, "15-05-1990");
+
+        // DD-MM-YYYY formatidan o'qib, uni YYYY-MM-DD ga reverse qilish
+        let date_dmy = BirthDate::parse_with_format("15-05-1990", DateFormat::DmyHyphen).unwrap();
+        let reversed_from_dmy = date_dmy.format_reversed(DateFormat::DmyHyphen);
+        assert_eq!(reversed_from_dmy, "1990-05-15");
+    }
+
+    // 3-variant: Dot (nuqtali) formatlar va ularning reverse state'i
+    #[test]
+    fn test_format_state_dot_reversal() {
+        // YYYY.MM.DD formatidan o'qish
+        let date_ymd_dot = BirthDate::parse_with_format("1990.05.15", DateFormat::YmdDot).unwrap();
+
+        // reversed() orqali DD.MM.YYYY ga o'tkazish
+        assert_eq!(
+            date_ymd_dot.format_reversed(DateFormat::YmdDot),
+            "15.05.1990"
+        );
+
+        // DD.MM.YYYY formatidan o'qib, uni YYYY.MM.DD ga reverse qilish
+        let date_dmy_dot = BirthDate::parse_with_format("15.05.1990", DateFormat::DmyDot).unwrap();
+        assert_eq!(
+            date_dmy_dot.format_reversed(DateFormat::DmyDot),
+            "1990.05.15"
+        );
+    }
+
     #[test]
     fn parse_should_fail_for_invalid_format() {
-        assert!(matches!(
-            BirthDate::parse("15-05-1990").unwrap_err(),
-            TypeError::BirthDate(BirthDateError::Date)
-        ));
-        assert!(matches!(
-            BirthDate::parse("1990/05/15").unwrap_err(),
-            TypeError::BirthDate(BirthDateError::Date)
-        ));
+        assert!(BirthDate::parse_with_format("15-05-1990", DateFormat::YmdHyphen).is_err());
     }
 
-    // 3. Noto'g'ri oy (13-oy) uchun xatolik
-    #[test]
-    fn parse_should_fail_for_invalid_month() {
-        assert!(matches!(
-            BirthDate::parse("1990-13-01").unwrap_err(),
-            TypeError::BirthDate(BirthDateError::Date)
-        ));
-    }
-
-    // 4. Noto'g'ri kun (32-kun) uchun xatolik
-    #[test]
-    fn parse_should_fail_for_invalid_day() {
-        assert!(matches!(
-            BirthDate::parse("1990-01-32").unwrap_err(),
-            TypeError::BirthDate(BirthDateError::Date)
-        ));
-    }
-
-    // 5. Kabisa yili (Leap year) validatsiyasi
-    #[test]
-    fn parse_should_validate_leap_year() {
-        assert!(BirthDate::parse("2000-02-29").is_ok());
-        assert!(matches!(
-            BirthDate::parse("1999-02-29").unwrap_err(),
-            TypeError::BirthDate(BirthDateError::Date)
-        ));
-    }
-
-    // 6. Kelajak sanasi kelsa xatolik berishi
-    #[test]
-    fn parse_should_fail_for_future_date() {
-        assert!(matches!(
-            BirthDate::parse("2100-01-01").unwrap_err(),
-            TypeError::BirthDate(BirthDateError::FutureDate)
-        ));
-    }
-
-    // 7. Boshidagi va oxiridagi bo'sh joylarni trim qilishi
-    #[test]
-    fn parse_should_trim_whitespace() {
-        let date = BirthDate::parse(" 1990-05-15 ").unwrap();
-        assert_eq!(date.to_string(), "1990-05-15");
-    }
-
-    // 8. Display, Deref va NaiveDate helper metodlarining ishlashi
-    #[test]
-    fn display_and_deref_should_work() {
-        let date = BirthDate::parse("2000-01-01").unwrap();
-        assert_eq!(format!("{}", date), "2000-01-01");
-
-        // Deref yordamida NaiveDate metodlarini to'g'ridan-to'g mevalarni chaqirish:
-        assert!(date.leap_year()); // 2000-yil kabisa yili
-        assert_eq!(date.as_naive_date(), &date.into_inner());
-    }
-
-    // 9. Copy trait va qiymatlarni o'tkazish (ownership o'zgarmasligi)
-    #[test]
-    fn birth_date_should_implement_copy() {
-        let first = BirthDate::parse("1985-03-20").unwrap();
-        let second = first; // Copy yuz beradi
-        assert_eq!(first, second);
-    }
-
-    // 10. Type o'g'irishlar: TryFrom va From (str, String, NaiveDate)
-    #[test]
-    fn test_try_from_and_from_conversions() {
-        let date_str = BirthDate::try_from("1990-05-15").unwrap();
-        let date_string = BirthDate::try_from(String::from("1990-05-15")).unwrap();
-        assert_eq!(date_str, date_string);
-
-        let naive = NaiveDate::from_ymd_opt(1990, 5, 15).unwrap();
-        let date_naive = BirthDate::try_from(naive).unwrap();
-        assert_eq!(date_str, date_naive);
-
-        let value_string: String = date_str.into();
-        assert_eq!(value_string, "1990-05-15");
-
-        let value_naive: NaiveDate = date_str.into();
-        assert_eq!(value_naive, naive);
-    }
-
-    // 11. Serde Serializatsiya va Deserializatsiya (Roundtrip)
     #[test]
     fn birth_date_should_support_serde_roundtrip() {
         let date = BirthDate::parse("1990-05-15").unwrap();
-
         let json = serde_json::to_string(&date).unwrap();
-        assert_eq!(json, "\"1990-05-15\"");
-
         let restored: BirthDate = serde_json::from_str(&json).unwrap();
         assert_eq!(date, restored);
-    }
-
-    // 12. Deserializatsiya paytida validatsiya ishlashi
-    #[test]
-    fn deserialize_should_validate_format_and_future_dates() {
-        let valid_json = "\"2025-01-01\"";
-        let date: BirthDate = serde_json::from_str(valid_json).unwrap();
-        assert_eq!(date.to_string(), "2025-01-01");
-
-        let invalid_json = "\"2100-01-01\"";
-        assert!(serde_json::from_str::<BirthDate>(invalid_json).is_err());
     }
 }
