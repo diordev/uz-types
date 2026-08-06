@@ -1,11 +1,16 @@
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
-//! test_docs
+
+//! `uz-types` — qayta ishlatiladigan domain type va value object kutubxonasi.
+
 mod birth_date;
 mod error;
 mod passport;
 
-/// test_docs
-/// public prelude
-/// uz-types::prelude::*; orqali barcha taypelarni elon qilib ishlatish mumkun
+/// Tashqi foydalanish uchun umumiy type eksportlari.
+///
+/// Misol:
+/// ```
+/// use uz_types::prelude::*;
+/// ```
 pub mod prelude;

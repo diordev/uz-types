@@ -1,100 +1,95 @@
-use chrono::Datelike;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::{TypeError, TypeResult};
 
+/// Tug'ilgan sanani ifodalovchi value object.
+///
+/// Faqat `YYYY-MM-DD` formatdagi sanalarni qabul qiladi.
+/// Ichki qiymat sifatida `NaiveDate` saqlaydi.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-/// test_docs
-/// BirthDate Struct orqlai siz
-/// YYYY-MM-DD formatda qabul data qabul qilishingiz mumkun.
 pub struct BirthDate(NaiveDate);
 
 impl BirthDate {
-    // BirthDate ning yagona rasmiy string formati.
-    const FORMAT: &str = "%Y-%m-%d";
+    /// Sana uchun yagona rasmiy format.
+    const FORMAT: &'static str = "%Y-%m-%d";
 
-    /// test_docs
-    /// String ni BirthDate ga parse qiladi.
+    /// String qiymatdan BirthDate yaratadi.
     ///
-    /// Qabul qilinadigan format:
-    /// YYYY-MM-DD
-    ///
-    /// Misol:
-    /// 2025-08-04
+    /// Validatsiyalar:
+    /// - Format `YYYY-MM-DD` bo'lishi kerak.
+    /// - Kelajak sanasi qabul qilinmaydi.
     pub fn parse(value: impl AsRef<str>) -> TypeResult<Self> {
-        let raw: &str = value.as_ref().trim();
+        let raw = value.as_ref().trim();
 
-        // NaiveDate::parse_from_str o'zi format va uzunlikni tekshiradi
-        let date: NaiveDate = NaiveDate::parse_from_str(raw, Self::FORMAT).map_err(|_| {
-            TypeError::validation(format!("birth_date is not a valid YYYY-MM-DD date: {raw}"))
-        })?;
+        let date = NaiveDate::parse_from_str(raw, Self::FORMAT)
+            .map_err(|_| BirthDateError::InvalidDate)?;
 
-        let today: NaiveDate = chrono::Local::now().date_naive();
+        let today = chrono::Local::now().date_naive();
 
         if date > today {
-            return Err(TypeError::validation(format!(
-                "birth_date cannot be in the future: {raw}"
-            )));
+            return Err(BirthDateError::FutureDate.into());
         }
 
         Ok(Self(date))
     }
-    /// Instance dagi year qaytaradi type=u32
-    pub fn year(&self) -> u32 {
-        self.0.year() as u32
+
+    /// Tug'ilgan yilni qaytaradi.
+    #[inline]
+    pub fn year(&self) -> i32 {
+        self.0.year()
     }
 
-    /// Instance dagi month qaytaradi type=u32
+    /// Tug'ilgan oyni qaytaradi.
+    #[inline]
     pub fn month(&self) -> u32 {
         self.0.month()
     }
 
-    /// Instance dagi day qaytaradi type=u32
+    /// Tug'ilgan kunni qaytaradi.
+    #[inline]
     pub fn day(&self) -> u32 {
         self.0.day()
     }
 }
 
-// BirthDate qiymatini belgilangan sana formatida chiqaradi.
-// Ichki NaiveDate formatini tashqi ko'rinishga o'zgartiradi.
-// Masalan: 2025-01-01 ko'rinishida qaytaradi.
+/// BirthDate qiymatini `YYYY-MM-DD` formatda chiqaradi.
 impl std::fmt::Display for BirthDate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0.format(Self::FORMAT))
     }
 }
 
-// &str dan BirthDate yaratishning idiomatik usuli.
-// Parse muvaffaqiyatsiz bo'lsa xato qaytaradi.
+/// `&str` dan BirthDate yaratish.
 impl TryFrom<&str> for BirthDate {
     type Error = TypeError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> TypeResult<Self> {
         Self::parse(value)
     }
 }
 
-// String dan BirthDate yaratishning idiomatik usuli.
-// Parse muvaffaqiyatsiz bo'lsa xato qaytaradi.
+/// `String` dan BirthDate yaratish.
 impl TryFrom<String> for BirthDate {
     type Error = TypeError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_str())
+    fn try_from(value: String) -> TypeResult<Self> {
+        Self::parse(value)
     }
 }
 
-// BirthDate ni String ga aylantiradi.
-// Natija: "YYYY-MM-DD"
+/// BirthDate ni String ga aylantiradi.
+///
+/// Ownership ko'chadi.
 impl From<BirthDate> for String {
     fn from(value: BirthDate) -> Self {
         value.to_string()
     }
 }
 
-// BirthDate JSON ga "YYYY-MM-DD"
-// satri ko'rinishida serialize qilinadi.
+/// JSON serialize formati:
+///
+/// `"1990-05-15"`
 impl Serialize for BirthDate {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -104,17 +99,30 @@ impl Serialize for BirthDate {
     }
 }
 
-// JSON satrini BirthDate ga aylantiradi.
-// Parse orqali validatsiya amalga oshiriladi.
+/// JSON string qiymatini BirthDate ga aylantiradi.
+///
+/// Parse orqali validatsiya ishlaydi.
 impl<'de> Deserialize<'de> for BirthDate {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let s: &str = <&str>::deserialize(deserializer)?;
+        let value = <&str>::deserialize(deserializer)?;
 
-        Self::parse(s).map_err(serde::de::Error::custom)
+        Self::parse(value).map_err(serde::de::Error::custom)
     }
+}
+
+/// BirthDate uchun domain xatolari.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum BirthDateError {
+    /// Kelajak sanasi berilgan.
+    #[error("birth date cannot be in the future")]
+    FutureDate,
+
+    /// Sana formati yoki qiymati noto'g'ri.
+    #[error("invalid birth date")]
+    InvalidDate,
 }
 
 #[cfg(test)]

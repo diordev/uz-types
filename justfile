@@ -2,6 +2,7 @@
 
 default:
     echo 'Hello, world!'
+
 run:
 	cargo fmt && cargo check && cargo run -q
 
@@ -13,3 +14,6 @@ tree:
 
 clippy:
 	cargo clippy --all-targets --all-features -- -D warnings
+
+test:
+    cargo test -- --test-threads=1 --nocapture
