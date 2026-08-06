@@ -63,17 +63,13 @@ impl Passport {
             )));
         }
 
-        if !number.bytes().all(|b| b.is_ascii_digit())  {
+        if !number.bytes().all(|b| b.is_ascii_digit()) {
             return Err(TypeError::validation(format!(
                 "passport number must contain exactly 7 digits: {raw}",
             )));
         }
 
-        Ok(Self(format!(
-            "{}{}",
-            series.to_ascii_uppercase(),
-            number
-        )))
+        Ok(Self(format!("{}{}", series.to_ascii_uppercase(), number)))
     }
 
     /// To'liq pasport qiymati.

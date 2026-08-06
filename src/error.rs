@@ -3,9 +3,7 @@ use std::fmt;
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum TypeError {
-    Validation {
-        message: String,
-    },
+    Validation { message: String },
 }
 
 impl TypeError {

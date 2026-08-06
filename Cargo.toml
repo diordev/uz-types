@@ -2,11 +2,29 @@
 name = "uz-types"
 version = "0.1.0"
 authors = ["Diyorbek Abdumutalibov <diordev@icloud.com>"]
+license = "MIT OR Apache-2.0"
+description = "Rust loyihalar uchun qayta ishlatiladigan type, value object va domain model'lar kutubxonasi."
+documentation = "https://docs.rs/uz-types"
+repository = "https://github.com/diordev/uz-types"
+readme = "README.md"
+keywords = ["types", "value-object", "domain-model", "validation", "uzbekistan"]
+categories = ["data-structures", "rust-patterns"]
 
 edition = "2024"
 rust-version = "1.85"
 
+include = [
+    "README.md",
+    "Cargo.toml",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "src/**/*.rs",
+    "examples/**/*.rs",
+]
+
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
 serde_json = "1"
