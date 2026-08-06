@@ -1,0 +1,15 @@
+# MacOS
+.DS_Store
+
+# Rust build artifacts
+target/
+
+# IDEs
+.idea/
+.vscode/
+.project
+.settings
+.classpath
+
+# Log file
+*.log
