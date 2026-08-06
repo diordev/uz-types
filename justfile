@@ -16,4 +16,7 @@ clippy:
 	cargo clippy --all-targets --all-features -- -D warnings
 
 test:
-    cargo test -- --test-threads=1 --nocapture
+    cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test -- --test-threads=1 --nocapture
+
+example:
+     cargo run --example types_example

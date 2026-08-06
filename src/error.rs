@@ -1,6 +1,7 @@
 use crate::birth_date::BirthDateError;
 use crate::passport::PassportError;
-
+use crate::phone_number::PhoneNumberError;
+use crate::pinfl::PinflError;
 
 /// `uz-types` crate ichidagi umumiy error turi.
 ///
@@ -30,6 +31,14 @@ pub enum TypeError {
     /// Passport bilan bog'liq xatolar.
     #[error(transparent)]
     Passport(#[from] PassportError),
+
+    /// Phone number bilan bog'liq xatolar.
+    #[error(transparent)]
+    PhoneNumber(#[from] PhoneNumberError),
+
+    /// Pinfl bilan bo'gliq xatolar
+    #[error(transparent)]
+    PINFL(#[from] PinflError),
 }
 
 impl TypeError {
@@ -41,6 +50,3 @@ impl TypeError {
         }
     }
 }
-
-/// `uz-types` metodlari uchun umumiy Result turi.
-pub type TypeResult<T> = Result<T, TypeError>;
