@@ -20,14 +20,15 @@ fn main() {
     let email = EmailAddress::parse("diordev@iclud.com").unwrap();
     println!("Email address: {}", email);
 
-    // JobId, SessionId, RequestId  generatisya qilish yoki parse qilish.
+    // JobId, SessionId, RequestId va Reuid  generatisya qilish yoki parse qilish.
 
     let job_id: JobId = JobId::generate();
     let session_id: SessionId = SessionId::generate();
     let request_id: RequestId = RequestId::generate();
+    let re_uid: Reuid = Reuid::generate();
 
     println!(
-        "JobId: {},\nSessionId: {},\nRequestId: {}",
-        job_id, session_id, request_id
+        "JobId: {},\nSessionId: {},\nRequestId: {},\nReuid: {}",
+        job_id, session_id, request_id, re_uid
     )
 }

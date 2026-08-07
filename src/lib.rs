@@ -23,6 +23,7 @@ mod error;
 mod passport;
 mod phone_number;
 mod pinfl;
+mod uuid_types;
 
 /// Tashqi foydalanish uchun umumiy type eksportlari.
 ///
@@ -33,4 +34,3 @@ mod pinfl;
 /// use uz_types::prelude::*;
 /// ```
 pub mod prelude;
-mod uuid_types;

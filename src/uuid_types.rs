@@ -169,6 +169,11 @@ define_uuid_type! {
     pub struct RequestId;
 }
 
+define_uuid_type! {
+    /// Secondary so'rovlarini kuzatish uchun unikal ID (UUID v4).
+    pub struct Reuid;
+}
+
 // ==========================================
 // TEST MACRO
 // ==========================================
