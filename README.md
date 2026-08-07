@@ -16,7 +16,7 @@ Kutubxonani loyihangizga qo'shish uchun `Cargo.toml` faylingizga quyidagini kiri
 
 ```toml
 [dependencies]
-uz-types = "0.6"
+uz-types = "0.7"
 ```
 
 ## 🛠 Foydalanish (Quick Start)
@@ -42,6 +42,15 @@ fn main() {
     // Email tekshiruvi
     let email = EmailAddress::parse("diordev@iclud.com").unwrap();
     println!("Email address: {}", email);
+
+    // JobId, SessionId, RequestId  generatisya qilish yoki parse qilish.
+
+    let job_id: JobId = JobId::generate();
+    let session_id: SessionId = SessionId::generate();
+    let request_id: RequestId = RequestId::generate();
+
+    println!("JobId: {},\nSessionId: {},\nRequestId: {}", job_id, session_id, request_id)
 }
+
 
 ```

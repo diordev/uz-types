@@ -44,6 +44,10 @@ pub enum TypeError {
     /// Email bilan bo'gliq xatolar
     #[error(transparent)]
     EmailAddress(#[from] EmailAddressError),
+
+    /// Uuid bilan bog'liq hatolikar
+    #[error(transparent)]
+    Uuid(#[from] crate::uuid_types::UuidError),
 }
 
 impl TypeError {

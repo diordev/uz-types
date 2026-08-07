@@ -33,3 +33,4 @@ mod pinfl;
 /// use uz_types::prelude::*;
 /// ```
 pub mod prelude;
+mod uuid_types;

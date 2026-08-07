@@ -1,6 +1,6 @@
 [package]
 name = "uz-types"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Diyorbek Abdumutalibov <diordev@icloud.com>"]
 license = "MIT OR Apache-2.0"
 description = "Rust loyihalar uchun qayta ishlatiladigan type, value object va domain model'lar kutubxonasi."
@@ -26,6 +26,7 @@ include = [
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
+uuid = { version = "1.24.0", features = ["v4"] }
 
 
 [dev-dependencies]
