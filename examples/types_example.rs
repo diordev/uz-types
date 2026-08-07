@@ -15,4 +15,8 @@ fn main() {
     // Tug'ilgan sanani tekshirish
     let birth_date = BirthDate::parse("1995-08-31").unwrap();
     println!("Tug'ilgan sana: {}", birth_date);
+
+    // Email tekshiruvi
+    let email = EmailAddress::parse("diordev@iclud.com").unwrap();
+    println!("Email address: {}", email);
 }

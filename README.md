@@ -16,13 +16,12 @@ Kutubxonani loyihangizga qo'shish uchun `Cargo.toml` faylingizga quyidagini kiri
 
 ```toml
 [dependencies]
-uz-types = "0.5"
+uz-types = "0.6"
 ```
 
 ## 🛠 Foydalanish (Quick Start)
 ```rust
 use uz_types::prelude::*;
-
 fn main() {
     // Pasportni tekshirish va yaratish
     let passport = Passport::parse("AA1234567").unwrap();
@@ -35,9 +34,14 @@ fn main() {
     // PhoneNumber ni tekshirish
     let phone = PhoneNumber::parse("998901234567").unwrap();
     println!("Phone Number: {}", phone);
-    
+
     // Tug'ilgan sanani tekshirish
     let birth_date = BirthDate::parse("1995-08-31").unwrap();
     println!("Tug'ilgan sana: {}", birth_date);
+
+    // Email tekshiruvi
+    let email = EmailAddress::parse("diordev@iclud.com").unwrap();
+    println!("Email address: {}", email);
 }
+
 ```

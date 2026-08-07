@@ -1,4 +1,5 @@
 use crate::birth_date::BirthDateError;
+use crate::email::EmailAddressError;
 use crate::passport::PassportError;
 use crate::phone_number::PhoneNumberError;
 use crate::pinfl::PinflError;
@@ -39,6 +40,10 @@ pub enum TypeError {
     /// Pinfl bilan bo'gliq xatolar
     #[error(transparent)]
     PINFL(#[from] PinflError),
+
+    /// Email bilan bo'gliq xatolar
+    #[error(transparent)]
+    EmailAddress(#[from] EmailAddressError),
 }
 
 impl TypeError {

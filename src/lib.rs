@@ -14,9 +14,11 @@
 //! - `Passport` - O'zbekiston pasport seriyasi va raqami (masalan: `AA1234567`).
 //! - `Pinfl` - Jismoniy shaxsning shaxsiy identifikatsiya raqami (14 xonali raqam).
 //! - `PhoneNumber` - Xalqaro formatdagi telefon raqamlari.
+//! - `EmailAddress` - Validatsiya qilingan elektron pochta (email) manzili.
 //! - `BirthDate` - Tug'ilgan sana (YYYY-MM-DD formati va kelajak sanalariga qarshi himoya).
 
 mod birth_date;
+mod email;
 mod error;
 mod passport;
 mod phone_number;

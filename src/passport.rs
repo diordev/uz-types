@@ -86,8 +86,7 @@ impl Passport {
 // DEFAULT TRAITLAR
 // ==========================================
 
-/// `Deref` tufayli `Passport` obyektida `String`/`&str` metodlarini (masalan, .starts_with())
-/// to'g'ridan-to'g'ri chaqirish mumkin bo'ladi.
+/// `Deref` tufayli `Passport` obyektida `String`/`&str` metodlarini to'g'ridan-to'g'ri chaqirish.
 impl Deref for Passport {
     type Target = str;
 
