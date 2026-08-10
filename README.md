@@ -16,7 +16,7 @@ Kutubxonani loyihangizga qo'shish uchun `Cargo.toml` faylingizga quyidagini kiri
 
 ```toml
 [dependencies]
-uz-types = "0.9"
+uz-types = "0.10"
 ```
 
 ## 🛠 Foydalanish (Quick Start)
@@ -66,7 +66,18 @@ fn main() {
     println!(
         "JobId: {},\nSessionId: {},\nRequestId: {},\nReuid: {}",
         job_id, session_id, request_id, re_uid
-    )
+    );
+
+    // API uchun AccessToken, RefreshToken
+    let access_token: AccessToken =
+        AccessToken::parse(" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xyz ").unwrap();
+    let refresh_token: RefreshToken =
+        RefreshToken::parse(" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xyz ").unwrap();
+
+    println!(
+        "AccessToken: {},\nRefreshToken: {}",
+        access_token, refresh_token
+    );
 }
 
 

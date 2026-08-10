@@ -71,10 +71,10 @@ macro_rules! define_id_type {
 
                 // 2-qadam: UUID ekanligini tekshiramiz
                 let parsed = uuid::Uuid::parse_str(raw)
-                    .map_err(|_| $crate::error::TypeError::IdError($crate::uuid_types::IdError::Format))?;
+                    .map_err(|_| $crate::error::TypeError::Id($crate::uuid_types::IdError::Format))?;
 
                 if parsed.get_version() != Some(uuid::Version::Random) {
-                    return Err($crate::error::TypeError::IdError($crate::uuid_types::IdError::Version));
+                    return Err($crate::error::TypeError::Id($crate::uuid_types::IdError::Version));
                 }
 
                 Ok(Self($crate::uuid_types::IdFormat::Uuid(parsed)))
@@ -285,13 +285,13 @@ macro_rules! id_type_tests {
                 // Na UUID, na raqam bo'lgan matn
                 assert!(matches!(
                     $Type::parse("not-a-uuid-or-number").unwrap_err(),
-                    $crate::error::TypeError::IdError($crate::uuid_types::IdError::Format)
+                    $crate::error::TypeError::Id($crate::uuid_types::IdError::Format)
                 ));
 
                 // v4 bo'lmagan UUID
                 assert!(matches!(
                     $Type::parse(INVALID_V1).unwrap_err(),
-                    $crate::error::TypeError::IdError($crate::uuid_types::IdError::Version)
+                    $crate::error::TypeError::Id($crate::uuid_types::IdError::Version)
                 ));
             }
 

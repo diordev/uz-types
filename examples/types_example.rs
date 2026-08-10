@@ -43,5 +43,17 @@ fn main() {
     println!(
         "JobId: {},\nSessionId: {},\nRequestId: {},\nReuid: {}",
         job_id, session_id, request_id, re_uid
-    )
+    );
+    println!();
+
+    // API uchun AccessToken, RefreshToken
+    let access_token: AccessToken =
+        AccessToken::parse(" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xyz ").unwrap();
+    let refresh_token: RefreshToken =
+        RefreshToken::parse(" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xyz ").unwrap();
+
+    println!(
+        "AccessToken: {},\nRefreshToken: {}",
+        access_token, refresh_token
+    );
 }

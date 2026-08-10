@@ -3,6 +3,8 @@ use crate::email::EmailAddressError;
 use crate::passport::PassportError;
 use crate::phone_number::PhoneNumberError;
 use crate::pinfl::PinflError;
+use crate::token_types::TokenError;
+use crate::uuid_types::IdError;
 
 /// `uz-types` crate ichidagi umumiy error turi.
 ///
@@ -45,9 +47,13 @@ pub enum TypeError {
     #[error(transparent)]
     EmailAddress(#[from] EmailAddressError),
 
-    /// Uuid yok raqamli (ID) bilan bog'liq hatolikar
+    /// Uuid yoki raqamli (ID) bilan bog'liq hatolikar
     #[error(transparent)]
-    IdError(#[from] crate::uuid_types::IdError),
+    Id(#[from] IdError),
+
+    /// Tokenlar (AccessToken yoki RefreshToken) bilan bo'g'liq hatolikar.
+    #[error(transparent)]
+    Token(#[from] TokenError),
 }
 
 impl TypeError {
