@@ -19,13 +19,26 @@ fn main() {
     // Email tekshiruvi
     let email = EmailAddress::parse("diordev@iclud.com").unwrap();
     println!("Email address: {}", email);
-
-    // JobId, SessionId, RequestId va Reuid  generatisya qilish yoki parse qilish.
+    println!();
+    // JobId, SessionId, RequestId va Reuid  UUID generatisya qilish yoki parse qilish.
 
     let job_id: JobId = JobId::generate();
     let session_id: SessionId = SessionId::generate();
     let request_id: RequestId = RequestId::generate();
     let re_uid: Reuid = Reuid::generate();
+
+    println!(
+        "JobId: {},\nSessionId: {},\nRequestId: {},\nReuid: {}",
+        job_id, session_id, request_id, re_uid
+    );
+    println!();
+
+    // JobId, SessionId, RequestId va Reuid  u64 generatisya qilish yoki parse qilish.
+
+    let job_id: JobId = JobId::parse("11111").unwrap();
+    let session_id: SessionId = SessionId::parse("22222").unwrap();
+    let request_id: RequestId = RequestId::parse("333333").unwrap();
+    let re_uid: Reuid = Reuid::parse("444444").unwrap();
 
     println!(
         "JobId: {},\nSessionId: {},\nRequestId: {},\nReuid: {}",

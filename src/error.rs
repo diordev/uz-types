@@ -45,9 +45,9 @@ pub enum TypeError {
     #[error(transparent)]
     EmailAddress(#[from] EmailAddressError),
 
-    /// Uuid bilan bog'liq hatolikar
+    /// Uuid yok raqamli (ID) bilan bog'liq hatolikar
     #[error(transparent)]
-    Uuid(#[from] crate::uuid_types::UuidError),
+    IdError(#[from] crate::uuid_types::IdError),
 }
 
 impl TypeError {
