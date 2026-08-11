@@ -1,13 +1,11 @@
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, NaiveDate, Utc};
 use serde::{self, Deserialize, Serialize};
+use std::borrow::Cow;
 use std::ops::Deref;
 
 use crate::error::TypeError;
 
 /// Sana formatlarini belgilovchi state (holat) enumi.
-///
-/// Turli xil formatlar (`YYYY-MM-DD`, `DD-MM-YYYY` va ularning nuqtali versiyalari)
-/// o'rtasida o'tish va ularni teskarisiga (reverse) o'zgartirish uchun ishlatiladi.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DateFormat {
     /// YYYY-MM-DD formati
@@ -22,6 +20,8 @@ pub enum DateFormat {
 
 impl DateFormat {
     /// Chrono kutubxonasi uchun mos format stringini qaytaradi.
+    #[inline]
+    #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::YmdHyphen => "%Y-%m-%d",
@@ -31,13 +31,15 @@ impl DateFormat {
         }
     }
 
-    /// Joriy format holatini (state) teskarisiga (reverse) o'zgartiradi.
+    /// Format holatini (state) compile-time darajasida teskarisiga o'zgartiradi.
     ///
     /// - `YYYY-MM-DD` -> `DD-MM-YYYY`
     /// - `DD-MM-YYYY` -> `YYYY-MM-DD`
     /// - `YYYY.MM.DD` -> `DD.MM.YYYY`
     /// - `DD.MM.YYYY` -> `YYYY.MM.DD`
-    pub fn reversed(&self) -> Self {
+    #[inline]
+    #[must_use]
+    pub const fn reversed(&self) -> Self {
         match self {
             Self::YmdHyphen => Self::DmyHyphen,
             Self::DmyHyphen => Self::YmdHyphen,
@@ -48,11 +50,9 @@ impl DateFormat {
 }
 
 /// Tug'ilgan sanani ifodalovchi value object.
-///
-/// Berilgan format va kelajakda bo'lmagan sanalarni qabul qiladi.
+/// Berilgan sana kelajakdagi hali kelmagan sanani qabul qilmaydi.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BirthDate(NaiveDate);
-
 impl BirthDate {
     /// Standart rasmiy format (`YYYY-MM-DD`).
     pub const DEFAULT_FORMAT: DateFormat = DateFormat::YmdHyphen;
@@ -75,9 +75,9 @@ impl BirthDate {
         Self::from_naive_date(date)
     }
 
-    /// `NaiveDate` obyektidan `BirthDate` yaratadi (kelajak sanasi tekshiriladi).
+    /// `NaiveDate` obyektidan `BirthDate` yaratadi (server timezone muammosiz kelajak sanasini tekshiradi).
     pub fn from_naive_date(date: NaiveDate) -> Result<Self, TypeError> {
-        let today = chrono::Local::now().date_naive();
+        let today = Utc::now().date_naive();
 
         if date > today {
             return Err(BirthDateError::FutureDate.into());
@@ -87,42 +87,43 @@ impl BirthDate {
     }
 
     /// Sanani berilgan format (`DateFormat` state) bo'yicha `String` ko'rinishiga o'tkazadi.
+    #[inline]
+    #[must_use]
     pub fn format_as(&self, format: DateFormat) -> String {
         self.0.format(format.as_str()).to_string()
     }
 
     /// Joriy formatni olib, uni `reversed()` state yordamida teskari formatga o'tkazib qaytaradi.
-    pub fn format_reversed(&self, current_format: DateFormat) -> String {
-        let target_format = current_format.reversed();
-        self.format_as(target_format)
-    }
-
-    /// Ichki `NaiveDate` qiymatiga reference qaytaradi.
     #[inline]
-    pub fn as_naive_date(&self) -> &NaiveDate {
-        &self.0
+    #[must_use]
+    pub fn format_reversed(&self, current_format: DateFormat) -> String {
+        self.format_as(current_format.reversed())
     }
 
     /// Ichki `NaiveDate` qiymatini qaytaradi (`Copy` bo'lgani uchun ownership yo'qolmaydi).
     #[inline]
+    #[must_use]
     pub fn into_inner(self) -> NaiveDate {
         self.0
     }
 
     /// Tug'ilgan yilni qaytaradi.
     #[inline]
+    #[must_use]
     pub fn year(&self) -> i32 {
         self.0.year()
     }
 
     /// Tug'ilgan oyni qaytaradi (1..=12).
     #[inline]
+    #[must_use]
     pub fn month(&self) -> u32 {
         self.0.month()
     }
 
     /// Tug'ilgan kunni qaytaradi (1..=31).
     #[inline]
+    #[must_use]
     pub fn day(&self) -> u32 {
         self.0.day()
     }
@@ -220,7 +221,7 @@ impl<'de> Deserialize<'de> for BirthDate {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = <&str>::deserialize(deserializer)?;
+        let s = Cow::<'de, str>::deserialize(deserializer)?;
         Self::parse(s).map_err(serde::de::Error::custom)
     }
 }

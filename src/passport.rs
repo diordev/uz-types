@@ -1,6 +1,8 @@
-use crate::error::TypeError;
 use serde::{self, Deserialize, Serialize};
+use std::borrow::Cow;
 use std::ops::Deref;
+
+use crate::error::TypeError;
 
 /// O'zbekiston pasport seriyasi va raqami.
 ///
@@ -170,8 +172,10 @@ impl<'de> Deserialize<'de> for Passport {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        Self::try_from(s).map_err(serde::de::Error::custom)
+        let s = Cow::<'de, str>::deserialize(deserializer)?;
+
+        // s.as_ref() orqali &str sifatida parse yoki try_from ga uzatamiz
+        Self::try_from(s.as_ref()).map_err(serde::de::Error::custom)
     }
 }
 

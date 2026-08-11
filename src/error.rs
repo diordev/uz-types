@@ -17,10 +17,6 @@ use crate::uuid_types::IdError;
 #[non_exhaustive]
 pub enum TypeError {
     /// Umumiy validation xatolari.
-    ///
-    /// Masalan:
-    /// - noto'g'ri input
-    /// - umumiy tekshiruv xatolari
     #[error("validation error: {message}")]
     Validation {
         /// Xato haqida batafsil ma'lumot.

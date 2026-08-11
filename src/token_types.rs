@@ -1,6 +1,8 @@
-use crate::error::TypeError;
-use serde::{Deserialize, Serialize};
+use serde::{self, Deserialize, Serialize};
+use std::borrow::Cow;
 use std::ops::Deref;
+
+use crate::error::TypeError;
 
 // ==========================================
 // TOKEN XATOLIKLARI
@@ -134,8 +136,10 @@ macro_rules! define_token_type {
             where
                 D: serde::Deserializer<'de>,
             {
-                let s = String::deserialize(deserializer)?;
-                Self::try_from(s).map_err(serde::de::Error::custom)
+                let s = Cow::<'de, str>::deserialize(deserializer)?;
+
+                // s.as_ref() orqali &str sifatida parse yoki try_from ga uzatamiz
+                Self::try_from(s.as_ref()).map_err(serde::de::Error::custom)
             }
         }
     };

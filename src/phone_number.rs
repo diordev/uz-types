@@ -1,6 +1,8 @@
-use crate::error::TypeError;
-use serde::{Deserialize, Serialize};
+use serde::{self, Deserialize, Serialize};
+use std::borrow::Cow;
 use std::ops::Deref;
+
+use crate::error::TypeError;
 
 /// O'zbekiston telefon raqami.
 ///
@@ -152,13 +154,16 @@ impl Serialize for PhoneNumber {
 }
 
 /// JSON'dan o'qish jarayonida tayyor `String` xotirasini qayta ishlash uchun.
+#[allow(unknown_lints)]
 impl<'de> Deserialize<'de> for PhoneNumber {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        Self::try_from(s).map_err(serde::de::Error::custom)
+        let s = Cow::<'de, str>::deserialize(deserializer)?;
+
+        // s.as_ref() orqali &str sifatida parse yoki try_from ga uzatamiz
+        Self::try_from(s.as_ref()).map_err(serde::de::Error::custom)
     }
 }
 
