@@ -155,6 +155,16 @@ define_token_type! {
     pub struct RefreshToken;
 }
 
+define_token_type! {
+    /// Yangi `ClientId` olish uchun ishlatiladigan tur (String) turni qabul qiladi.
+    pub struct ClientId;
+}
+
+define_token_type! {
+    /// Yangi `ClientSecret` olish uchun ishlatiladigan tur (String) turni qabul qiladi..
+    pub struct ClientSecret;
+}
+
 // ==========================================
 // TESTLAR (Minimalist)
 // ==========================================

@@ -16,8 +16,8 @@
 //! - `PhoneNumber` - Xalqaro formatdagi telefon raqamlari.
 //! - `EmailAddress` - Validatsiya qilingan elektron pochta (email) manzili.
 //! - `BirthDate` - Tug'ilgan sana (YYYY-MM-DD formati va kelajak sanalariga qarshi himoya).
-//! - `JobId, SessionId, RequestId, Reuid ` - Quyidagi turlarni UUID yoki u64 turlari orqali ishlatish mumkun.
-//! - `AccessToken, RefreshToken` - API xizmatlarga ulanish uchun ruxsat beruvchi qisqa muddatli token (JWT/Bearer).
+//! - `JobId`, `SessionId`, `RequestId`, `Reuid ` - Quyidagi turlarni UUID yoki u64 turlari orqali ishlatish mumkun.
+//! - `AccessToken`, `RefreshToken`, `ClientId`, `ClientSecret` - API xizmatlarga ulanish uchun ruxsat beruvchi qisqa muddatli token (JWT/Bearer) va String qiymat qabul qiluvchi turlar.
 
 mod birth_date;
 mod email;
