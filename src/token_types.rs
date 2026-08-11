@@ -45,12 +45,14 @@ macro_rules! define_token_type {
 
             /// Tokenning ichki matn qiymatini (`&str`) qaytaradi.
             #[inline]
+            #[must_use]
             pub fn as_str(&self) -> &str {
                 &self.0
             }
 
             /// Ichki `String`ni to'liq qaytaradi (ownership uzatiladi).
             #[inline]
+            #[must_use]
             pub fn into_inner(self) -> String {
                 self.0
             }
@@ -62,6 +64,7 @@ macro_rules! define_token_type {
         impl Deref for $Name {
             type Target = str;
 
+            #[inline]
             fn deref(&self) -> &Self::Target {
                 &self.0
             }
@@ -69,6 +72,8 @@ macro_rules! define_token_type {
 
         /// Tokenni xavfsiz tarzda `&str` sifatda qabul qilishga yordam beradi.
         impl AsRef<str> for $Name {
+
+            #[inline]
             fn as_ref(&self) -> &str {
                 &self.0
             }
@@ -138,8 +143,12 @@ macro_rules! define_token_type {
             {
                 let s = Cow::<'de, str>::deserialize(deserializer)?;
 
-                // s.as_ref() orqali &str sifatida parse yoki try_from ga uzatamiz
-                Self::try_from(s.as_ref()).map_err(serde::de::Error::custom)
+                match s {
+                    // Borrow qilingan bo'lsa: zero-allocation &str orqali yasaladi
+                    Cow::Borrowed(borrowed) => Self::try_from(borrowed).map_err(serde::de::Error::custom),
+                    // Owned (String) bo'lsa: tayyor String xotirasi TryFrom<String> ga uzatiladi
+                    Cow::Owned(owned) => Self::try_from(owned).map_err(serde::de::Error::custom),
+                }
             }
         }
     };

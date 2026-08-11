@@ -181,8 +181,12 @@ impl<'de> Deserialize<'de> for EmailAddress {
     {
         let s = Cow::<'de, str>::deserialize(deserializer)?;
 
-        // s.as_ref() orqali &str sifatida parse yoki try_from ga uzatamiz
-        Self::try_from(s.as_ref()).map_err(serde::de::Error::custom)
+        match s {
+            // Borrow qilingan bo'lsa: zero-allocation &str orqali yasaladi
+            Cow::Borrowed(borrowed) => Self::try_from(borrowed).map_err(serde::de::Error::custom),
+            // Owned (String) bo'lsa: tayyor String xotirasi TryFrom<String> ga uzatiladi
+            Cow::Owned(owned) => Self::try_from(owned).map_err(serde::de::Error::custom),
+        }
     }
 }
 

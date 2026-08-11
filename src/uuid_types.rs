@@ -1,16 +1,14 @@
-// ==========================================
-// UUID XATOLIKLARI
-// ==========================================
+use crate::error::TypeError;
 
-/// UUID asosidagi tiplar uchun validatsiya xatoliklari.
+// UUID va Number formatlari uchun xatoliklar ro'yxati
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum IdError {
-    /// ID formati noto'g'ri (na UUID, na Number).
+    // Format UUID ham, Number ham bo'lmaganda chiqadigan xato
     #[error("invalid ID format (must be UUID or a valid number)")]
     Format,
 
-    /// UUID versiyasi mos kelmaydi (faqat v4 qabul qilinadi).
+    // UUID versiyasi 4 (Random) bo'lmaganda chiqadigan xato
     #[error("UUID must be version 4 (Random)")]
     Version,
 }
@@ -19,22 +17,44 @@ pub enum IdError {
 // UNIVERSAL ID FORMAT ENUM
 // ==========================================
 
-/// ID ning ichki ma'lumot formati.
-/// Universal identifikatorlar: yozuv (UUID) yoki raqamli (u64) bo'lishi mumkin.
+// ID ma'lumotlarini o'zida saqlovchi yagona enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum IdFormat {
+pub(crate) enum IdFormat {
     Uuid(uuid::Uuid),
     Number(u64),
 }
 
+impl IdFormat {
+    // Matnni qabul qilib, Number yoki UUID'ga xatosiz o'giruvchi yagona funksiya
+    pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
+        let raw = value.as_ref().trim();
+
+        // 1. Agar matn raqam bo'lsa, uni u64 formatida qaytaramiz
+        if let Ok(num) = raw.parse::<u64>() {
+            return Ok(Self::Number(num));
+        }
+
+        // 2. Aks holda matnni UUID sifatida parse qilishga urinamiz
+        let parsed = uuid::Uuid::parse_str(raw).map_err(|_| TypeError::Id(IdError::Format))?;
+
+        // 3. O'girilgan UUID faqatgina v4 (Random) bo'lishini talab qilamiz
+        if parsed.get_version() != Some(uuid::Version::Random) {
+            return Err(TypeError::Id(IdError::Version));
+        }
+
+        Ok(Self::Uuid(parsed))
+    }
+}
+
 impl Default for IdFormat {
-    /// Default sifatida har doim yangi UUID v4 yaratiladi.
+    // Obyekt bo'sh yaratilganda avtomatik yangi UUID v4 beriladi
     fn default() -> Self {
         Self::Uuid(uuid::Uuid::new_v4())
     }
 }
 
 impl std::fmt::Display for IdFormat {
+    // Formatni foydalanuvchiga matn ko'rinishida chiqarib berish
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Uuid(u) => write!(f, "{}", u.as_hyphenated()),
@@ -42,11 +62,66 @@ impl std::fmt::Display for IdFormat {
         }
     }
 }
+
 // ==========================================
-// MACRO DEFINITION
+// SERDE OPTIMIZATSIYASI (YAGONA NUSXA)
 // ==========================================
 
-/// Universal (UUID yoki Number) asosidagi strongly-typed wrapper yaratish uchun macro.
+impl serde::Serialize for IdFormat {
+    // Serialize qilinganda xotirani tejash uchun to'g'ridan-to'g'ri buferga yoziladi
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Uuid(u) => {
+                let mut buffer = uuid::Uuid::encode_buffer();
+                serializer.serialize_str(u.as_hyphenated().encode_lower(&mut buffer))
+            }
+            Self::Number(n) => serializer.serialize_u64(*n),
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for IdFormat {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct IdFormatVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for IdFormatVisitor {
+            type Value = IdFormat;
+
+            // Xato bo'lganda qanday ma'lumot kutilganligini bildirish
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a UUID v4 string or an integer")
+            }
+
+            // 1. Signed son (i64) - Serde trait'ida birinchi turadi
+            #[inline]
+            fn visit_i64<E: serde::de::Error>(self, value: i64) -> Result<Self::Value, E> {
+                u64::try_from(value)
+                    .map(IdFormat::Number)
+                    .map_err(|_| serde::de::Error::custom("ID number must be a non-negative u64"))
+            }
+
+            // 2. Unsigned son (u64) - visit_i64 dan keyin keladi
+            #[inline]
+            fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<Self::Value, E> {
+                Ok(IdFormat::Number(value))
+            }
+
+            // 3. Matn (str)
+            #[inline]
+            fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                IdFormat::parse(value).map_err(serde::de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_any(IdFormatVisitor)
+    }
+}
+
+// ==========================================
+// MACRO DEFINITION (JUDA IXCHAM)
+// ==========================================
+
+// Har bir yangi ID tipi uchun avtomatik kod yozib beruvchi makro
 macro_rules! define_id_type {
     (
         $(#[$meta:meta])*
@@ -54,47 +129,36 @@ macro_rules! define_id_type {
     ) => {
         $(#[$meta])*
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-        $vis struct $Name(pub $crate::uuid_types::IdFormat);
+        $vis struct $Name($crate::uuid_types::IdFormat);
 
         impl $Name {
             /// Satrdan ID obyektini parse qiladi (ajratadi).
             ///
             /// 1. Avval raqamga o'tkazishga (u64) urinadi.
             /// 2. Agar o'xshamasa, UUID sifatida parse qiladi.
+            #[inline]
             pub fn parse(value: impl AsRef<str>) -> Result<Self, $crate::error::TypeError> {
-                let raw = value.as_ref().trim();
-
-                // 1-qadam: Raqam ekanligini tekshiramiz (tezroq ishlaydi)
-                if let Ok(num) = raw.parse::<u64>() {
-                    return Ok(Self($crate::uuid_types::IdFormat::Number(num)));
-                }
-
-                // 2-qadam: UUID ekanligini tekshiramiz
-                let parsed = uuid::Uuid::parse_str(raw)
-                    .map_err(|_| $crate::error::TypeError::Id($crate::uuid_types::IdError::Format))?;
-
-                if parsed.get_version() != Some(uuid::Version::Random) {
-                    return Err($crate::error::TypeError::Id($crate::uuid_types::IdError::Version));
-                }
-
-                Ok(Self($crate::uuid_types::IdFormat::Uuid(parsed)))
+                $crate::uuid_types::IdFormat::parse(value).map(Self)
             }
 
             /// Yangi random (v4) tasodifiy UUID generatsiya qiladi.
             /// Universal bo'lgani bilan tizim default sifatida UUID ishlab chiqaradi.
             #[inline]
+            #[must_use]
             pub fn generate() -> Self {
                 Self($crate::uuid_types::IdFormat::default())
             }
 
             /// Obyektni satrga aylantiradi. (Kanonik UUID yoki oddiy raqam)
             #[inline]
+            #[must_use]
             pub fn to_string_val(self) -> String {
                 self.0.to_string()
             }
 
             /// Obyekt ichidagi UUIDni qaytaradi (agar u Number bo'lsa `None` qaytadi)
             #[inline]
+            #[must_use]
             pub fn as_uuid(&self) -> Option<&uuid::Uuid> {
                 match &self.0 {
                     $crate::uuid_types::IdFormat::Uuid(u) => Some(u),
@@ -104,6 +168,7 @@ macro_rules! define_id_type {
 
             /// Obyekt ichidagi Numberni qaytaradi (agar u Uuid bo'lsa `None` qaytadi)
             #[inline]
+            #[must_use]
             pub fn as_number(&self) -> Option<u64> {
                 match &self.0 {
                     $crate::uuid_types::IdFormat::Number(n) => Some(*n),
@@ -116,12 +181,14 @@ macro_rules! define_id_type {
         // DEFAULT TRAIT IMPLEMENTATSIYALARI
         // ==========================================
 
+        // Print qilish uchun (Display)
         impl std::fmt::Display for $Name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self.0)
+                std::fmt::Display::fmt(&self.0, f)
             }
         }
 
+        // &str dan xavfsiz o'girish uchun
         impl TryFrom<&str> for $Name {
             type Error = $crate::error::TypeError;
             fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -129,6 +196,7 @@ macro_rules! define_id_type {
             }
         }
 
+        // String dan xavfsiz o'girish uchun
         impl TryFrom<String> for $Name {
             type Error = $crate::error::TypeError;
             fn try_from(value: String) -> Result<Self, Self::Error> {
@@ -136,6 +204,7 @@ macro_rules! define_id_type {
             }
         }
 
+        // Tiptan oddiy String yaratish uchun
         impl From<$Name> for String {
             fn from(value: $Name) -> Self {
                 value.to_string_val()
@@ -143,62 +212,27 @@ macro_rules! define_id_type {
         }
 
         // ==========================================
-        // SERDE OPTIMIZATSIYASI (ZERO-ALLOCATION)
+        // SERDE DELEGATSIYASI (BINARY HAJMINI TEJAYDI)
         // ==========================================
 
+        // JSON ga aylantirishda asosiy enum (IdFormat) dagi mantiqqa yuboradi
         impl serde::Serialize for $Name {
+            #[inline]
             fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                match &self.0 {
-                    $crate::uuid_types::IdFormat::Uuid(u) => {
-                        let mut buffer = uuid::Uuid::encode_buffer();
-                        let s = u.as_hyphenated().encode_lower(&mut buffer);
-                        serializer.serialize_str(s)
-                    }
-                    $crate::uuid_types::IdFormat::Number(n) => {
-                        // Raqamlarni JSON'ga int formatda saqlaymiz
-                        serializer.serialize_u64(*n)
-                    }
-                }
+                self.0.serialize(serializer)
             }
         }
 
-        #[allow(unknown_lints)]
+        // JSON dan o'qishda ham tayyor enum (IdFormat) mantig'iga yuboradi
         impl<'de> serde::Deserialize<'de> for $Name {
+            #[inline]
             fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                // Turli xil JSON tiplarni (String yoki Int) allocation'siz ushlash uchun maxsus Visitor
-                struct IdVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for IdVisitor {
-                    type Value = $crate::uuid_types::IdFormat;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                        formatter.write_str("a UUID string or a number")
-                    }
-
-                    fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<Self::Value, E> {
-                        Ok($crate::uuid_types::IdFormat::Number(value))
-                    }
-
-                    fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
-                        if let Ok(num) = value.parse::<u64>() {
-                            Ok($crate::uuid_types::IdFormat::Number(num))
-                        } else if let Ok(u) = uuid::Uuid::parse_str(value) {
-                            if u.get_version() == Some(uuid::Version::Random) {
-                                Ok($crate::uuid_types::IdFormat::Uuid(u))
-                            } else {
-                                Err(serde::de::Error::custom("UUID must be version 4"))
-                            }
-                        } else {
-                            Err(serde::de::Error::custom("invalid ID format"))
-                        }
-                    }
-                }
-
-                deserializer.deserialize_any(IdVisitor).map(Self)
+                $crate::uuid_types::IdFormat::deserialize(deserializer).map(Self)
             }
         }
     };
 }
+
 // Macro orqali yangi tiplarni e'lon qilish:
 
 define_id_type! {

@@ -16,7 +16,7 @@ Kutubxonani loyihangizga qo'shish uchun `Cargo.toml` faylingizga quyidagini kiri
 
 ```toml
 [dependencies]
-uz-types = "0.12"
+uz-types = "0.13"
 ```
 
 ## 🛠 Foydalanish (Quick Start)
