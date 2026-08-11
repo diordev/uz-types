@@ -63,10 +63,6 @@ impl std::fmt::Display for IdFormat {
     }
 }
 
-// ==========================================
-// SERDE OPTIMIZATSIYASI (YAGONA NUSXA)
-// ==========================================
-
 impl serde::Serialize for IdFormat {
     // Serialize qilinganda xotirani tejash uchun to'g'ridan-to'g'ri buferga yoziladi
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -191,6 +187,7 @@ macro_rules! define_id_type {
         // &str dan xavfsiz o'girish uchun
         impl TryFrom<&str> for $Name {
             type Error = $crate::error::TypeError;
+
             fn try_from(value: &str) -> Result<Self, Self::Error> {
                 Self::parse(value)
             }
@@ -199,6 +196,7 @@ macro_rules! define_id_type {
         // String dan xavfsiz o'girish uchun
         impl TryFrom<String> for $Name {
             type Error = $crate::error::TypeError;
+
             fn try_from(value: String) -> Result<Self, Self::Error> {
                 Self::parse(&value)
             }

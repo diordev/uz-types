@@ -33,6 +33,7 @@ macro_rules! define_token_type {
 
         impl $Name {
             /// Bo'sh bo'lmagan matndan token yasaydi (chekkalarni qirqadi).
+            #[inline]
             pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
                 let raw = value.as_ref().trim();
 
@@ -126,6 +127,7 @@ macro_rules! define_token_type {
 
         /// Serializatsiyada tokenni oddiy matn sifatida (clone olmasdan) yozadi.
         impl Serialize for $Name {
+            #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
                 S: serde::Serializer,
@@ -137,6 +139,7 @@ macro_rules! define_token_type {
         /// JSON'dan o'qilganda String ajratilgan xotirasini imkon boricha saqlab qoladi.
         #[allow(unknown_lints)]
         impl<'de> Deserialize<'de> for $Name {
+            #[inline]
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: serde::Deserializer<'de>,

@@ -51,6 +51,7 @@ impl PhoneNumber {
     /// [`PhoneNumberError`] qaytaradi agar:
     /// - Raqamlar soni 12 ta bo'lmasa
     /// - Prefiks `998` bo'lmasa yoki raqamdan boshqa belgi mavjud bo'lsa
+    #[inline]
     pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
         let raw = value.as_ref().trim();
         let digits = raw.strip_prefix('+').unwrap_or(raw);
@@ -62,18 +63,21 @@ impl PhoneNumber {
 
     /// Raqamni `&str` sifatida qaytaradi (`+` siz, faqat 12 raqam).
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// Raqamni `+` bilan qaytaradi type=String (masalan: `+998901234567`).
     #[inline]
+    #[must_use]
     pub fn to_international(&self) -> String {
         format!("+{}", self.0)
     }
 
     /// Ichki String qiymatni qaytaradi (Ownership ko'chadi).
     #[inline]
+    #[must_use]
     pub fn into_inner(self) -> String {
         self.0
     }
@@ -87,6 +91,7 @@ impl PhoneNumber {
 impl Deref for PhoneNumber {
     type Target = str;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -94,6 +99,7 @@ impl Deref for PhoneNumber {
 
 /// Raqam qiymatini `&str` sifatida ishlatish imkonini beradi.
 impl AsRef<str> for PhoneNumber {
+    #[inline]
     fn as_ref(&self) -> &str {
         &self.0
     }
@@ -145,6 +151,7 @@ impl From<PhoneNumber> for String {
 
 /// Serializatsiya paytida `.clone()` olinishining oldini olish uchun manual implementatsiya.
 impl Serialize for PhoneNumber {
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -156,6 +163,7 @@ impl Serialize for PhoneNumber {
 /// JSON'dan o'qish jarayonida tayyor `String` xotirasini qayta ishlash uchun.
 #[allow(unknown_lints)]
 impl<'de> Deserialize<'de> for PhoneNumber {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

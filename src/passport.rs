@@ -47,6 +47,7 @@ impl Passport {
 
     /// `&str` yoki `String` kabi qiymatlardan  `Passport` yaratadi: trim qiladi, seriyani uppercase qiladi,
     /// formatni tekshiradi.
+    #[inline]
     pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
         let raw = value.as_ref().trim();
 
@@ -61,24 +62,28 @@ impl Passport {
 
     /// To'liq pasport qiymatini qaytaradi.
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// Pasport seriyasini qaytaradi.
     #[inline]
+    #[must_use]
     pub fn series(&self) -> &str {
         &self.0[..Self::SERIES_LEN]
     }
 
     /// Pasport raqamini qaytaradi.
     #[inline]
+    #[must_use]
     pub fn number(&self) -> &str {
         &self.0[Self::SERIES_LEN..]
     }
 
     /// Ichki `String` qiymatni qaytaradi (ownership `Passport`dan ko'chadi).
     #[inline]
+    #[must_use]
     pub fn into_inner(self) -> String {
         self.0
     }
@@ -92,6 +97,7 @@ impl Passport {
 impl Deref for Passport {
     type Target = str;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -99,6 +105,7 @@ impl Deref for Passport {
 
 /// `Passport`ni `&str` sifatida ishlatish imkonini beradi.
 impl AsRef<str> for Passport {
+    #[inline]
     fn as_ref(&self) -> &str {
         &self.0
     }
@@ -157,6 +164,7 @@ impl From<Passport> for String {
 
 /// Serializatsiya paytida `.clone()` olinishining oldini olish uchun manual implementatsiya.
 impl Serialize for Passport {
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -168,6 +176,7 @@ impl Serialize for Passport {
 /// JSON'dan o'qish jarayonida tayyor `String` xotirasini qayta ishlash uchun.
 #[allow(unknown_lints)]
 impl<'de> Deserialize<'de> for Passport {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

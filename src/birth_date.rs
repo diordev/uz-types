@@ -58,11 +58,13 @@ impl BirthDate {
     pub const DEFAULT_FORMAT: DateFormat = DateFormat::YmdHyphen;
 
     /// Standart `YYYY-MM-DD` formatidan `BirthDate` yaratadi.
+    #[inline]
     pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
         Self::parse_with_format(value, Self::DEFAULT_FORMAT)
     }
 
     /// Berilgan format (`DateFormat` state) asosida satrdan `BirthDate` yaratadi.
+    #[inline]
     pub fn parse_with_format(
         value: impl AsRef<str>,
         format: DateFormat,
@@ -76,6 +78,7 @@ impl BirthDate {
     }
 
     /// `NaiveDate` obyektidan `BirthDate` yaratadi (server timezone muammosiz kelajak sanasini tekshiradi).
+    #[inline]
     pub fn from_naive_date(date: NaiveDate) -> Result<Self, TypeError> {
         let today = Utc::now().date_naive();
 
@@ -206,6 +209,7 @@ impl From<BirthDate> for String {
 
 /// `Display` trait orqali intermediate `String` yaratmasdan to'g'ridan-to'g'ri serializatsiya qilish.
 impl Serialize for BirthDate {
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -217,6 +221,7 @@ impl Serialize for BirthDate {
 /// JSON string qiymatini zero-allocation (`&str`) orqali `BirthDate` ga o'tkazish.
 #[allow(unknown_lints)]
 impl<'de> Deserialize<'de> for BirthDate {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
