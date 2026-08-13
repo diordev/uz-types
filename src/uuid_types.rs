@@ -168,6 +168,17 @@ macro_rules! define_id_type {
             }
         }
 
+        // Rust'ning standart idiomatik parse uslubi ("text".parse() uchun).
+        impl std::str::FromStr for $Name {
+            type Err = TypeError;
+
+            // Rust'ning standart parse mantig'iga o'zimizning parse'ni ulab qo'yamiz
+            #[inline]
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Self::parse(s)
+            }
+        }
+
         // &str dan xavfsiz o'girish uchun
         impl TryFrom<&str> for $Name {
             type Error = $crate::error::TypeError;

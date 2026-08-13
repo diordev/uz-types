@@ -1,6 +1,5 @@
 use serde::{self, Deserialize, Serialize};
 use std::borrow::Cow;
-use std::ops::Deref;
 
 use crate::error::TypeError;
 
@@ -28,11 +27,12 @@ macro_rules! define_token_type {
         $vis:vis struct $Name:ident;
     ) => {
         $(#[$meta])*
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        // Debug ataylab olib tashlandi, uni pastda o'zimiz yozamiz
+        #[derive(Clone, PartialEq, Eq, Hash)]
         $vis struct $Name(String);
 
         impl $Name {
-            /// Bo'sh bo'lmagan matndan token yasaydi (chekkalarni qirqadi).
+            /// Bo'sh bo'lmagan matndan token yasaydi (ikki yonidagi bosh joylarni olib olib tashlaydi).
             #[inline]
             pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
                 let raw = value.as_ref().trim();
@@ -61,13 +61,10 @@ macro_rules! define_token_type {
 
         // --- Default Traitlar ---
 
-        /// `Deref` tufayli tokenda barcha `str` metodlarini ishlatish imkonini beradi.
-        impl Deref for $Name {
-            type Target = str;
-
-            #[inline]
-            fn deref(&self) -> &Self::Target {
-                &self.0
+        /// Xavfsiz Debug: loglarda haqiqiy tokenni emas, yashiringan matnni ko'rsatadi.
+        impl std::fmt::Debug for $Name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple(stringify!($Name)).field(&"***REDACTED***").finish()
             }
         }
 
@@ -80,14 +77,25 @@ macro_rules! define_token_type {
             }
         }
 
-        /// Tokenni matn ko'rinishida chiqarish (print) imkonini beradi.
+        // Tokenni matn ko'rinishida chiqarish (print) imkonini beradi.
         impl std::fmt::Display for $Name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str(&self.0)
             }
         }
 
-        /// Matndan tokenga aylantirish (parse jarayoni).
+        // Rust'ning standart idiomatik parse uslubi ("text".parse() uchun).
+        impl std::str::FromStr for $Name {
+            type Err = TypeError;
+
+            // Rust'ning standart parse mantig'iga o'zimizning parse'ni ulab qo'yamiz
+            #[inline]
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Self::parse(s)
+            }
+        }
+
+        // Matndan tokenga aylantirish (parse jarayoni).
         impl TryFrom<&str> for $Name {
             type Error = TypeError;
 
@@ -96,7 +104,7 @@ macro_rules! define_token_type {
             }
         }
 
-        /// Stringdan token yaratadi. Agar matnda bo'sh joy bo'lmasa, tayyor xotirani qayta ishlatadi (zero-alloc).
+        // Stringdan token yaratadi. Agar matnda bo'sh joy bo'lmasa, tayyor xotirani qayta ishlatadi (zero-alloc).
         impl TryFrom<String> for $Name {
             type Error = TypeError;
 
@@ -116,7 +124,7 @@ macro_rules! define_token_type {
             }
         }
 
-        /// Tokendan uning haqiqiy String formatini chiqarib oladi (nusxa olmaydi).
+        // Tokendan uning haqiqiy String formatini chiqarib oladi (nusxa olmaydi).
         impl From<$Name> for String {
             fn from(value: $Name) -> Self {
                 value.into_inner()
@@ -125,7 +133,7 @@ macro_rules! define_token_type {
 
         // --- Serde Optimizatsiyasi ---
 
-        /// Serializatsiyada tokenni oddiy matn sifatida (clone olmasdan) yozadi.
+        // Serializatsiyada tokenni oddiy matn sifatida (clone olmasdan) yozadi.
         impl Serialize for $Name {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -136,8 +144,7 @@ macro_rules! define_token_type {
             }
         }
 
-        /// JSON'dan o'qilganda String ajratilgan xotirasini imkon boricha saqlab qoladi.
-        #[allow(unknown_lints)]
+        // JSON'dan o'qilganda String ajratilgan xotirasini imkon boricha saqlab qoladi.
         impl<'de> Deserialize<'de> for $Name {
             #[inline]
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -172,12 +179,12 @@ define_token_type! {
 }
 
 define_token_type! {
-    /// Yangi `ClientId` olish uchun ishlatiladigan tur (String) turni qabul qiladi.
+    /// Yangi `ClientId` olish uchun ishlatiladigan tur (String qabul qiladi).
     pub struct ClientId;
 }
 
 define_token_type! {
-    /// Yangi `ClientSecret` olish uchun ishlatiladigan tur (String) turni qabul qiladi..
+    /// Yangi `ClientSecret` olish uchun ishlatiladigan tur (String qabul qiladi).
     pub struct ClientSecret;
 }
 
