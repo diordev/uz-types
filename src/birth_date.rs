@@ -50,12 +50,23 @@ impl DateFormat {
 }
 
 /// Tug'ilgan sanani ifodalovchi value object.
-/// Berilgan sana kelajakdagi hali kelmagan sanani qabul qilmaydi.
+///
+/// Sana ikki tomondan cheklanadi:
+/// - **Yuqoridan**: kelajakdagi sana qabul qilinmaydi
+///   ([`BirthDateError::FutureDate`]);
+/// - **Pastdan**: [`Self::MIN_YEAR`] dan oldingi yil qabul qilinmaydi
+///   ([`BirthDateError::TooOld`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BirthDate(NaiveDate);
 impl BirthDate {
     /// Standart rasmiy format (`YYYY-MM-DD`).
     pub const DEFAULT_FORMAT: DateFormat = DateFormat::YmdHyphen;
+
+    /// Qabul qilinadigan eng erta tug'ilgan yil.
+    ///
+    /// Bu chegara `0001-01-01` kabi ma'nosiz qiymatlar va noto'g'ri
+    /// parse qilingan sanalarni to'sadi.
+    pub const MIN_YEAR: i32 = 1900;
 
     /// Standart `YYYY-MM-DD` formatidan `BirthDate` yaratadi.
     #[inline]
@@ -77,12 +88,36 @@ impl BirthDate {
         Self::from_naive_date(date)
     }
 
-    /// `NaiveDate` obyektidan `BirthDate` yaratadi (server timezone muammosiz kelajak sanasini tekshiradi).
+    /// `NaiveDate` obyektidan `BirthDate` yaratadi.
+    ///
+    /// # Timezone
+    ///
+    /// Server UTC'da ishlashi mumkin, foydalanuvchi esa boshqa mintaqada
+    /// (O'zbekiston — UTC+5). Shu sababli yuqori chegara sifatida
+    /// **UTC bo'yicha ertangi kun** olinadi: bu Yer yuzidagi eng oldinda
+    /// turgan mintaqa (UTC+14) uchun ham to'g'ri bo'ladi va bugun
+    /// tug'ilgan chaqaloq xato `FutureDate` olmaydi.
     #[inline]
     pub fn from_naive_date(date: NaiveDate) -> Result<Self, TypeError> {
-        let today = Utc::now().date_naive();
+        Self::from_naive_date_with_today(date, Utc::now().date_naive())
+    }
 
-        if date > today {
+    /// `from_naive_date` ning deterministik (testlanadigan) varianti —
+    /// "bugun" tashqaridan beriladi, tizim soatiga murojaat qilinmaydi.
+    ///
+    /// `today` UTC bo'yicha joriy sana bo'lishi kutiladi.
+    #[inline]
+    pub fn from_naive_date_with_today(
+        date: NaiveDate,
+        today: NaiveDate,
+    ) -> Result<Self, TypeError> {
+        if date.year() < Self::MIN_YEAR {
+            return Err(BirthDateError::TooOld.into());
+        }
+
+        // UTC+14 gacha bo'lgan mintaqalar uchun bir kunlik yon berish.
+        let max_allowed = today.succ_opt().unwrap_or(today);
+        if date > max_allowed {
             return Err(BirthDateError::FutureDate.into());
         }
 
@@ -130,6 +165,35 @@ impl BirthDate {
     pub fn day(&self) -> u32 {
         self.0.day()
     }
+
+    /// To'liq yoshni qaytaradi (bugungi UTC sanasi bo'yicha).
+    ///
+    /// Tug'ilgan kun bu yil hali kelmagan bo'lsa, yosh bir birlik kam bo'ladi.
+    #[inline]
+    #[must_use]
+    pub fn age(&self) -> u32 {
+        self.age_at(Utc::now().date_naive())
+    }
+
+    /// Berilgan sanadagi to'liq yoshni qaytaradi (deterministik, testlanadigan).
+    ///
+    /// `date` tug'ilgan sanadan oldin bo'lsa `0` qaytaradi.
+    #[must_use]
+    pub fn age_at(&self, date: NaiveDate) -> u32 {
+        if date <= self.0 {
+            return 0;
+        }
+
+        let mut years = date.year() - self.0.year();
+
+        // Tug'ilgan kun bu yil hali kelmagan bo'lsa, bir yil ayiramiz.
+        // Kortej solishtiruvi 29-fevral holatini ham to'g'ri hal qiladi.
+        if (date.month(), date.day()) < (self.0.month(), self.0.day()) {
+            years -= 1;
+        }
+
+        u32::try_from(years).unwrap_or(0)
+    }
 }
 
 // ==========================================
@@ -159,6 +223,19 @@ impl AsRef<NaiveDate> for BirthDate {
 impl std::fmt::Display for BirthDate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0.format(Self::DEFAULT_FORMAT.as_str()))
+    }
+}
+
+/// Rust'ning standart idiomatik parse uslubi (`"1990-05-15".parse::<BirthDate>()`).
+///
+/// Faqat standart [`BirthDate::DEFAULT_FORMAT`] (`YYYY-MM-DD`) qabul qilinadi;
+/// boshqa format uchun [`BirthDate::parse_with_format`] dan foydalaning.
+impl std::str::FromStr for BirthDate {
+    type Err = TypeError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
     }
 }
 
@@ -219,7 +296,6 @@ impl Serialize for BirthDate {
 }
 
 /// JSON string qiymatini zero-allocation (`&str`) orqali `BirthDate` ga o'tkazish.
-#[allow(unknown_lints)]
 impl<'de> Deserialize<'de> for BirthDate {
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -252,6 +328,13 @@ pub enum BirthDateError {
     /// Kelajak sanasi berilgan (tug'ilgan sana kelajakda bo'lishi mumkin emas).
     #[error("birth date cannot be in the future")]
     FutureDate,
+
+    /// Sana juda uzoq o'tmishda (yil [`BirthDate::MIN_YEAR`] dan kichik).
+    #[error(
+        "birth date is too far in the past, year must be >= {}",
+        BirthDate::MIN_YEAR
+    )]
+    TooOld,
 }
 
 #[cfg(test)]
@@ -315,5 +398,95 @@ mod tests {
         let json = serde_json::to_string(&date).unwrap();
         let restored: BirthDate = serde_json::from_str(&json).unwrap();
         assert_eq!(date, restored);
+    }
+
+    // --- Chegaralar ---
+
+    #[test]
+    fn parse_should_reject_dates_before_min_year() {
+        assert!(matches!(
+            BirthDate::parse("0001-01-01").unwrap_err(),
+            TypeError::BirthDate(BirthDateError::TooOld)
+        ));
+        assert!(matches!(
+            BirthDate::parse("1899-12-31").unwrap_err(),
+            TypeError::BirthDate(BirthDateError::TooOld)
+        ));
+        // Chegaraning o'zi qabul qilinadi
+        assert!(BirthDate::parse("1900-01-01").is_ok());
+    }
+
+    #[test]
+    fn parse_should_reject_future_dates() {
+        assert!(matches!(
+            BirthDate::parse("3000-01-01").unwrap_err(),
+            TypeError::BirthDate(BirthDateError::FutureDate)
+        ));
+    }
+
+    #[test]
+    fn today_and_tomorrow_utc_should_be_accepted() {
+        let today = NaiveDate::from_ymd_opt(2026, 8, 14).unwrap();
+
+        // UTC bo'yicha bugun — albatta qabul qilinadi
+        assert!(BirthDate::from_naive_date_with_today(today, today).is_ok());
+
+        // UTC+5 (Toshkent) da kun allaqachon almashgan bo'lishi mumkin —
+        // ertangi UTC sanasi ham qabul qilinishi kerak
+        let tomorrow = today.succ_opt().unwrap();
+        assert!(BirthDate::from_naive_date_with_today(tomorrow, today).is_ok());
+
+        // Ikki kundan keyingisi esa yo'q
+        let day_after = tomorrow.succ_opt().unwrap();
+        assert!(matches!(
+            BirthDate::from_naive_date_with_today(day_after, today).unwrap_err(),
+            TypeError::BirthDate(BirthDateError::FutureDate)
+        ));
+    }
+
+    // --- Yosh hisoblash ---
+
+    #[test]
+    fn age_at_should_account_for_upcoming_birthday() {
+        let date = BirthDate::parse("1990-05-15").unwrap();
+
+        // Tug'ilgan kundan keyin
+        let after = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
+        assert_eq!(date.age_at(after), 36);
+
+        // Aynan tug'ilgan kunda
+        let on = NaiveDate::from_ymd_opt(2026, 5, 15).unwrap();
+        assert_eq!(date.age_at(on), 36);
+
+        // Tug'ilgan kundan oldin — bir yil kam
+        let before = NaiveDate::from_ymd_opt(2026, 5, 14).unwrap();
+        assert_eq!(date.age_at(before), 35);
+    }
+
+    #[test]
+    fn age_at_should_handle_leap_day_birthday() {
+        let date = BirthDate::parse("2000-02-29").unwrap();
+
+        // Kabisa bo'lmagan yilda 28-fevral — tug'ilgan kun hali kelmagan
+        let feb_28 = NaiveDate::from_ymd_opt(2025, 2, 28).unwrap();
+        assert_eq!(date.age_at(feb_28), 24);
+
+        // 1-mart — o'tgan hisoblanadi
+        let mar_1 = NaiveDate::from_ymd_opt(2025, 3, 1).unwrap();
+        assert_eq!(date.age_at(mar_1), 25);
+    }
+
+    #[test]
+    fn age_at_should_return_zero_for_dates_before_birth() {
+        let date = BirthDate::parse("2020-06-01").unwrap();
+        let earlier = NaiveDate::from_ymd_opt(2019, 1, 1).unwrap();
+        assert_eq!(date.age_at(earlier), 0);
+        assert_eq!(date.age_at(date.into_inner()), 0);
+    }
+
+    #[test]
+    fn age_should_be_consistent_with_age_at_today() {
+        let date = BirthDate::parse("1990-05-15").unwrap();
+        assert_eq!(date.age(), date.age_at(Utc::now().date_naive()));
     }
 }

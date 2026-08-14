@@ -6,7 +6,21 @@ use crate::error::TypeError;
 
 /// O'zbekiston pasport seriyasi va raqami.
 ///
-/// Format: 2 ta lotin harfi + 7 ta raqam. Misol: `AA1234567`.
+/// # Format
+///
+/// - 2 ta lotin harfi (seriya) + 7 ta raqam. Misol: `AA1234567`
+/// - Kichik harflar avtomatik KATTA harfga o'tkaziladi
+/// - Ikki yonidagi bo'sh joylar olib tashlanadi
+///
+/// # ⚠️ Tekshiruv doirasi
+///
+/// **Faqat format tekshiriladi** — uzunlik va belgilar turi. Seriya
+/// haqiqatan ham amaldagi seriyalar ro'yxatiga kiradimi, bu tekshirilmaydi:
+/// `ZZ0000000` yoki `QQ1234567` ham qabul qilinadi.
+///
+/// Agar sizga hujjatning haqiqiyligi kafolati kerak bo'lsa, uni davlat
+/// xizmati orqali alohida tasdiqlashingiz zarur. Xuddi shu cheklov
+/// [`Pinfl`](crate::Pinfl) uchun ham amal qiladi.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Passport(String);
 
@@ -20,8 +34,10 @@ impl Passport {
     /// Umumiy uzunlik: seriya + raqam.
     pub const LEN: usize = Self::SERIES_LEN + Self::NUMBER_LEN;
 
-    /// Ichki validatsiya logikasi (Xotira ajratishga ta'sir qilmaydi).
-    /// Faqat formatni tekshiradi, uppercase yoki trim amallarini bajarmaydi.
+    /// Ichki validatsiya logikasi (Xotira ajratmaydi).
+    ///
+    /// Faqat formatni tekshiradi — uppercase yoki trim amallarini bajarmaydi,
+    /// shu sababli katta/kichik harfga bog'liq emas.
     fn validate(raw: &str) -> Result<(), PassportError> {
         if raw.len() != Self::LEN {
             return Err(PassportError::Length);
@@ -45,8 +61,16 @@ impl Passport {
         Ok(())
     }
 
-    /// `&str` yoki `String` kabi qiymatlardan  `Passport` yaratadi: trim qiladi, seriyani uppercase qiladi,
-    /// formatni tekshiradi.
+    /// `&str` yoki `String` kabi qiymatlardan `Passport` yaratadi: trim qiladi,
+    /// formatni tekshiradi va seriyani uppercase qilib saqlaydi.
+    ///
+    /// # Xatolar
+    ///
+    /// [`PassportError`] qaytaradi agar:
+    /// - Umumiy uzunlik [`Self::LEN`] ga teng bo'lmasa;
+    /// - Dastlabki [`Self::SERIES_LEN`] ta belgi lotin harfi bo'lmasa;
+    /// - Qolgan [`Self::NUMBER_LEN`] ta belgi raqam bo'lmasa;
+    /// - ASCII bo'lmagan belgi uchrasa.
     #[inline]
     pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
         let raw = value.as_ref().trim();
@@ -118,6 +142,16 @@ impl std::fmt::Display for Passport {
     }
 }
 
+/// Rust'ning standart idiomatik parse uslubi (`"AA1234567".parse::<Passport>()`).
+impl std::str::FromStr for Passport {
+    type Err = TypeError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 /// `&str` dan `Passport` yaratish.
 impl TryFrom<&str> for Passport {
     type Error = TypeError;
@@ -174,7 +208,6 @@ impl Serialize for Passport {
 }
 
 /// JSON'dan o'qish jarayonida tayyor `String` xotirasini qayta ishlash uchun.
-#[allow(unknown_lints)]
 impl<'de> Deserialize<'de> for Passport {
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -191,6 +224,10 @@ impl<'de> Deserialize<'de> for Passport {
         }
     }
 }
+
+// ==========================================
+// XATOLIKLAR ENUMI
+// ==========================================
 
 /// `Passport` validatsiya xatolari.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]

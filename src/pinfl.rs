@@ -13,14 +13,28 @@ use crate::error::TypeError;
 /// - Aynan **14 ta** ASCII raqam
 /// - Harflar, bo'shliqlar yoki maxsus belgilar qabul qilinmaydi
 /// - Kirish: `12345678901234`
+///
+/// # ⚠️ Tekshiruv doirasi
+///
+/// **Faqat format tekshiriladi** — uzunlik va raqamlardan iboratlik.
+/// Quyidagilar tekshirilmaydi:
+///
+/// - nazorat summasi (checksum, 14-raqam);
+/// - 1-raqamdagi jins/asr belgisi;
+/// - 2–7 raqamlardagi tug'ilgan sana strukturasi.
+///
+/// Shu sababli `00000000000000` kabi mavjud bo'lmagan raqam ham qabul
+/// qilinadi. Agar sizga haqiqiy PINFL kafolati kerak bo'lsa, uni davlat
+/// xizmati (masalan `my.gov.uz` yoki idoraviy API) orqali alohida
+/// tasdiqlashingiz zarur.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Pinfl(String);
 
 impl Pinfl {
-    /// Pinfl uzunligi — aynan 14 Pinfl.
+    /// PINFL uzunligi — aynan 14 ta raqam.
     pub const LEN: usize = 14;
 
-    /// Ichki validatsiya logikasi (Xotira ajratishga ta'sir qilmaydi)
+    /// Ichki validatsiya logikasi (Xotira ajratmaydi).
     fn validate(pinfl: &str) -> Result<(), PinflError> {
         if pinfl.len() != Self::LEN {
             return Err(PinflError::Length);
@@ -31,7 +45,14 @@ impl Pinfl {
         Ok(())
     }
 
-    /// `&str` yoki `String` kabi qiymatlardan  `Pinfl` yaratadi (Yangi xotira ajratadi).
+    /// `&str` yoki `String` kabi qiymatlardan `Pinfl` yaratadi:
+    /// trim qiladi va formatni tekshiradi.
+    ///
+    /// # Xatolar
+    ///
+    /// [`PinflError`] qaytaradi agar:
+    /// - Uzunlik [`Self::LEN`] ga teng bo'lmasa;
+    /// - Raqamdan boshqa belgi uchrasa.
     #[inline]
     pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
         let pinfl = value.as_ref().trim();
@@ -86,6 +107,16 @@ impl std::fmt::Display for Pinfl {
     }
 }
 
+/// Rust'ning standart idiomatik parse uslubi (`"12345678901234".parse::<Pinfl>()`).
+impl std::str::FromStr for Pinfl {
+    type Err = TypeError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 /// `&str` dan `Pinfl` yaratish.
 impl TryFrom<&str> for Pinfl {
     type Error = TypeError;
@@ -136,7 +167,6 @@ impl Serialize for Pinfl {
 }
 
 /// JSON'dan o'qish jarayonida zero-copy (`&str`) va zarur hollarda `String` xotirasini qayta ishlash uchun.
-#[allow(unknown_lints)]
 impl<'de> Deserialize<'de> for Pinfl {
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -153,6 +183,10 @@ impl<'de> Deserialize<'de> for Pinfl {
         }
     }
 }
+
+// ==========================================
+// XATOLIKLAR ENUMI
+// ==========================================
 
 /// `Pinfl` validatsiya xatolari.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]

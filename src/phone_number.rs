@@ -23,6 +23,37 @@ impl PhoneNumber {
     /// O'zbekiston telefon raqam kodi prefiksi (`+` siz).
     pub const COUNTRY_CODE: &str = "998";
 
+    /// Operator/hudud kodi uzunligi (`998` dan keyingi 2 raqam).
+    pub const OPERATOR_CODE_LEN: usize = 2;
+
+    /// Ma'lum mobil operator kodlari (`998` dan keyingi 2 raqam).
+    ///
+    /// Bu ro'yxat O'zbekistonda ajratilgan mobil kodlarni qamrab oladi.
+    /// Yangi kod ajratilsa, shu massivga qo'shish kifoya.
+    pub const MOBILE_CODES: [&str; 14] = [
+        "20", "33", "50", "55", "77", "88", "90", "91", "93", "94", "95", "97", "98", "99",
+    ];
+
+    /// Shahar/hudud (statsionar) kodlari `60`–`79` oralig'ida bo'ladi
+    /// (masalan `71` — Toshkent, `66` — Samarqand).
+    pub const REGIONAL_CODE_RANGE: (u8, u8) = (60, 79);
+
+    /// Kod ma'lum mobil yoki hudud kodimi — shuni tekshiradi.
+    ///
+    /// `code` aynan 2 ta ASCII raqamdan iborat bo'lishi kutiladi.
+    #[must_use]
+    pub fn is_known_operator_code(code: &str) -> bool {
+        if Self::MOBILE_CODES.contains(&code) {
+            return true;
+        }
+
+        // Hudud kodlari uzluksiz oraliq — massivda saqlashning hojati yo'q.
+        match code.parse::<u8>() {
+            Ok(n) => n >= Self::REGIONAL_CODE_RANGE.0 && n <= Self::REGIONAL_CODE_RANGE.1,
+            Err(_) => false,
+        }
+    }
+
     /// Ichki validatsiya logikasi (Xotira ajratishga ta'sir qilmaydi)
     fn validate(phone: &str) -> Result<(), PhoneNumberError> {
         // phone uzunligi 12 ekanligini tekshiradi
@@ -39,18 +70,29 @@ impl PhoneNumber {
         if !phone.starts_with(Self::COUNTRY_CODE) {
             return Err(PhoneNumberError::Prefix);
         }
+
+        // `998` dan keyingi 2 raqam haqiqiy operator/hudud kodi bo'lishi kerak.
+        // Bu `998000000000` kabi soxta raqamlarni to'sadi.
+        let code =
+            &phone[Self::COUNTRY_CODE.len()..Self::COUNTRY_CODE.len() + Self::OPERATOR_CODE_LEN];
+        if !Self::is_known_operator_code(code) {
+            return Err(PhoneNumberError::OperatorCode);
+        }
+
         Ok(())
     }
 
     /// `&str` yoki `String` kabi qiymatlardan `PhoneNumber` yaratadi.
     ///
-    /// Agar boshidagi `+` belgisi bo'lsahma qabul qilinadi va olib tashlanadi.
+    /// Boshidagi `+` belgisi bo'lsa ham qabul qilinadi va olib tashlanadi.
     ///
     /// # Xatolar
     ///
     /// [`PhoneNumberError`] qaytaradi agar:
     /// - Raqamlar soni 12 ta bo'lmasa
-    /// - Prefiks `998` bo'lmasa yoki raqamdan boshqa belgi mavjud bo'lsa
+    /// - Raqamdan boshqa belgi mavjud bo'lsa
+    /// - Prefiks `998` bo'lmasa
+    /// - `998` dan keyingi 2 raqam ma'lum operator/hudud kodi bo'lmasa
     #[inline]
     pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
         let raw = value.as_ref().trim();
@@ -69,10 +111,35 @@ impl PhoneNumber {
     }
 
     /// Raqamni `+` bilan qaytaradi type=String (masalan: `+998901234567`).
+    ///
+    /// Diqqat: har chaqiruvda yangi `String` ajratiladi.
     #[inline]
     #[must_use]
     pub fn to_international(&self) -> String {
         format!("+{}", self.0)
+    }
+
+    /// Operator yoki hudud kodini qaytaradi (masalan `90`, `71`).
+    #[inline]
+    #[must_use]
+    pub fn operator_code(&self) -> &str {
+        let start = Self::COUNTRY_CODE.len();
+        &self.0[start..start + Self::OPERATOR_CODE_LEN]
+    }
+
+    /// Kod va davlat prefiksidan keyingi abonent raqamini qaytaradi
+    /// (masalan `998901234567` uchun `1234567`).
+    #[inline]
+    #[must_use]
+    pub fn subscriber_number(&self) -> &str {
+        &self.0[Self::COUNTRY_CODE.len() + Self::OPERATOR_CODE_LEN..]
+    }
+
+    /// Raqam mobil operatorga tegishlimi.
+    #[inline]
+    #[must_use]
+    pub fn is_mobile(&self) -> bool {
+        Self::MOBILE_CODES.contains(&self.operator_code())
     }
 
     /// Ichki String qiymatni qaytaradi (Ownership ko'chadi).
@@ -109,6 +176,16 @@ impl AsRef<str> for PhoneNumber {
 impl std::fmt::Display for PhoneNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+/// Rust'ning standart idiomatik parse uslubi (`"998901234567".parse::<PhoneNumber>()`).
+impl std::str::FromStr for PhoneNumber {
+    type Err = TypeError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
     }
 }
 
@@ -161,7 +238,6 @@ impl Serialize for PhoneNumber {
 }
 
 /// JSON'dan o'qish jarayonida tayyor `String` xotirasini qayta ishlash uchun.
-#[allow(unknown_lints)]
 impl<'de> Deserialize<'de> for PhoneNumber {
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -179,6 +255,10 @@ impl<'de> Deserialize<'de> for PhoneNumber {
     }
 }
 
+// ==========================================
+// XATOLIKLAR ENUMI
+// ==========================================
+
 /// `PhoneNumber` validatsiya xatolari.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
@@ -194,6 +274,10 @@ pub enum PhoneNumberError {
     /// Telefon raqami O'zbekiston kodi bilan boshlanishi kerak.
     #[error("phone number must start with 998")]
     Prefix,
+
+    /// `998` dan keyingi 2 raqam ma'lum operator/hudud kodi emas.
+    #[error("phone number has an unknown operator or region code")]
+    OperatorCode,
 }
 
 #[cfg(test)]
@@ -323,5 +407,65 @@ mod tests {
     fn to_international_should_add_plus() {
         let phone = PhoneNumber::parse(PHONE_NUMBER_WITHOUT_PLUS).unwrap();
         assert_eq!(phone.to_international(), PHONE_NUMBER_WITH_PLUS);
+    }
+
+    // 10. Operator/hudud kodi tekshiruvi
+    #[test]
+    fn parse_should_reject_unknown_operator_code() {
+        for input in [
+            "998000000000",
+            "998110000000",
+            "998890000000",
+            "998920000000",
+        ] {
+            assert!(
+                matches!(
+                    PhoneNumber::parse(input).unwrap_err(),
+                    TypeError::PhoneNumber(PhoneNumberError::OperatorCode)
+                ),
+                "{input} rad etilishi kerak edi"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_should_accept_all_known_codes() {
+        // Barcha mobil kodlar
+        for code in PhoneNumber::MOBILE_CODES {
+            let number = format!("998{code}1234567");
+            assert!(
+                PhoneNumber::parse(&number).is_ok(),
+                "{number} qabul qilinishi kerak edi"
+            );
+        }
+
+        // Hudud kodlari oraliqning ikkala chekkasi bilan
+        for code in ["60", "66", "71", "79"] {
+            let number = format!("998{code}1234567");
+            assert!(
+                PhoneNumber::parse(&number).is_ok(),
+                "{number} qabul qilinishi kerak edi"
+            );
+        }
+    }
+
+    // 11. Kod / abonent raqami helper metodlari
+    #[test]
+    fn should_split_operator_code_and_subscriber_number() {
+        let mobile = PhoneNumber::parse("998901234567").unwrap();
+        assert_eq!(mobile.operator_code(), "90");
+        assert_eq!(mobile.subscriber_number(), "1234567");
+        assert!(mobile.is_mobile());
+
+        let landline = PhoneNumber::parse("998711234567").unwrap();
+        assert_eq!(landline.operator_code(), "71");
+        assert!(!landline.is_mobile());
+    }
+
+    // 12. TryFrom<String> ning zero-allocation yo'li ham kodni tekshirishi kerak
+    #[test]
+    fn try_from_string_should_also_validate_operator_code() {
+        assert!(PhoneNumber::try_from(String::from("998000000000")).is_err());
+        assert!(PhoneNumber::try_from(String::from("  998000000000  ")).is_err());
     }
 }

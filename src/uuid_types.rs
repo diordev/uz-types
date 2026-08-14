@@ -18,6 +18,28 @@ pub enum IdError {
 // ==========================================
 
 /// ID ma'lumotlarini o'zida saqlovchi yagona enum (crate ichida yashiringan).
+///
+/// # ⚠️ Serde: bitta tip — ikki xil JSON shakli
+///
+/// Ichkarida qaysi variant saqlanganiga qarab JSON turlicha chiqadi:
+///
+/// | Ichki qiymat | JSON natijasi                              |
+/// |--------------|--------------------------------------------|
+/// | `Uuid`       | `"9b7e597e-893e-4e11-92cf-f4e7d4f923b1"`   |
+/// | `Number`     | `123456789` (qo'shtirnoqsiz, integer)      |
+///
+/// Deserializatsiyada ikkalasi ham (va raqamning string ko'rinishi ham)
+/// qabul qilinadi.
+///
+/// Buning amaliy oqibatlari:
+/// - **OpenAPI/JSON Schema**: maydon `oneOf: [string, integer]` bo'ladi,
+///   qat'iy bitta tip emas;
+/// - **Ma'lumotlar bazasi**: bitta ustunga ba'zan matn, ba'zan son tushadi;
+/// - **Boshqa tildagi klient**: `typeof id` barqaror bo'lmaydi.
+///
+/// Agar API'ingizda bitta barqaror shakl kerak bo'lsa, loyihaning
+/// chegarasida faqat bitta variantdan foydalaning (masalan, hamma joyda
+/// `generate_v7()` — u har doim string beradi).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum IdFormat {
     Uuid(uuid::Uuid),
@@ -134,6 +156,24 @@ macro_rules! define_id_type {
             #[must_use]
             pub fn generate() -> Self {
                 Self($crate::uuid_types::IdFormat::Uuid(uuid::Uuid::new_v4()))
+            }
+
+            /// Yangi vaqt-tartiblangan (v7) UUID generatsiya qiladi.
+            ///
+            /// v7 qiymatlar yaratilish vaqti bo'yicha tartiblanadi — bu
+            /// ma'lumotlar bazasida B-tree indeks fragmentatsiyasini kamaytiradi
+            /// va primary key sifatida v4 dan afzalroq.
+            #[inline]
+            #[must_use]
+            pub fn generate_v7() -> Self {
+                Self($crate::uuid_types::IdFormat::Uuid(uuid::Uuid::now_v7()))
+            }
+
+            /// Ichki qiymat UUID bo'lsa, uning versiyasini qaytaradi (v4 yoki v7).
+            #[inline]
+            #[must_use]
+            pub fn uuid_version(&self) -> Option<uuid::Version> {
+                self.as_uuid().and_then(uuid::Uuid::get_version)
             }
 
             /// Obyekt ichidagi UUIDni qaytaradi (agar u Number bo'lsa `None`).
@@ -263,7 +303,11 @@ macro_rules! id_type_tests {
             const VALID_UUID: &str = "9b7e597e-893e-4e11-92cf-f4e7d4f923b1";
             const VALID_UPPER: &str = "9B7E597E-893E-4E11-92CF-F4E7D4F923B1";
             const VALID_SIMPLE: &str = "9b7e597e893e4e1192cff4e7d4f923b1";
+            const VALID_V7: &str = "01912d68-783e-7c1f-bcf6-9a5b4c3d2e1f";
             const INVALID_V1: &str = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+            // v3 (nom-asosli MD5) va v5 (nom-asosli SHA-1) ham rad etilishi kerak
+            const INVALID_V3: &str = "3d813cbb-47fb-32ba-91df-831e1593ac29";
+            const INVALID_V5: &str = "21f7f8de-8051-5b89-8680-0195ef798b6a";
 
             // Number uchun konstantalar
             const VALID_NUM_STR: &str = "123456789";
@@ -308,6 +352,13 @@ macro_rules! id_type_tests {
             }
 
             #[test]
+            fn valid_v7_uuid_should_parse() {
+                let id = $Type::parse(VALID_V7).unwrap();
+                assert_eq!(id.uuid_version(), Some(uuid::Version::SortRand));
+                assert_eq!(id.to_string(), VALID_V7);
+            }
+
+            #[test]
             fn invalid_formats_should_be_rejected() {
                 // Na UUID, na raqam bo'lgan matn
                 assert!(matches!(
@@ -315,11 +366,16 @@ macro_rules! id_type_tests {
                     $crate::error::TypeError::Id($crate::uuid_types::IdError::Format)
                 ));
 
-                // v4 bo'lmagan UUID
-                assert!(matches!(
-                    $Type::parse(INVALID_V1).unwrap_err(),
-                    $crate::error::TypeError::Id($crate::uuid_types::IdError::Version)
-                ));
+                // v4/v7 bo'lmagan UUID versiyalari rad etilishi kerak
+                for invalid in [INVALID_V1, INVALID_V3, INVALID_V5] {
+                    assert!(
+                        matches!(
+                            $Type::parse(invalid).unwrap_err(),
+                            $crate::error::TypeError::Id($crate::uuid_types::IdError::Version)
+                        ),
+                        "{invalid} rad etilishi kerak edi"
+                    );
+                }
             }
 
             #[test]
@@ -329,6 +385,28 @@ macro_rules! id_type_tests {
 
                 assert_ne!(id1, id2);
                 assert!(id1.as_uuid().is_some()); // Default holatda UUID v4 generatsiya qilinishi kerak
+                assert_eq!(id1.uuid_version(), Some(uuid::Version::Random));
+            }
+
+            #[test]
+            fn generate_v7_should_produce_sortable_uuid() {
+                let id1 = $Type::generate_v7();
+                let id2 = $Type::generate_v7();
+
+                assert_ne!(id1, id2);
+                assert_eq!(id1.uuid_version(), Some(uuid::Version::SortRand));
+
+                // v7 vaqt bo'yicha tartiblangan — matn ko'rinishi ham o'sib boradi
+                assert!(id1.to_string() <= id2.to_string());
+
+                // O'zi generatsiya qilgan qiymat qayta parse bo'lishi shart
+                assert_eq!($Type::parse(id1.to_string()).unwrap(), id1);
+            }
+
+            #[test]
+            fn number_ids_have_no_uuid_version() {
+                let id = $Type::parse(VALID_NUM_STR).unwrap();
+                assert_eq!(id.uuid_version(), None);
             }
 
             #[test]
@@ -368,4 +446,6 @@ mod tests {
 
     id_type_tests!(job_id_tests, JobId);
     id_type_tests!(session_id_tests, SessionId);
+    id_type_tests!(request_id_tests, RequestId);
+    id_type_tests!(reuid_tests, Reuid);
 }

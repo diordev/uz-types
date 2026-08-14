@@ -14,7 +14,18 @@ pub enum TokenError {
     /// Token butunlay bo'sh bo'lishi mumkin emas.
     #[error("token cannot be empty")]
     Empty,
+
+    /// Token ruxsat etilgan uzunlikdan oshib ketdi.
+    #[error("token is too long, maximum is {} bytes", MAX_TOKEN_LEN)]
+    TooLong,
 }
+
+/// Token uchun maksimal uzunlik (bayt).
+///
+/// Bu chegara ishonchsiz manbadan (masalan JSON body'dan) kelgan
+/// cheksiz uzunlikdagi matn xotirani to'ldirib qo'yishining oldini oladi.
+/// 8 KiB — amaldagi JWT va Bearer tokenlar uchun yetarlicha keng zaxira.
+pub const MAX_TOKEN_LEN: usize = 8192;
 
 // ==========================================
 // MACRO DEFINITION
@@ -32,16 +43,36 @@ macro_rules! define_token_type {
         $vis struct $Name(String);
 
         impl $Name {
-            /// Bo'sh bo'lmagan matndan token yasaydi (ikki yonidagi bosh joylarni olib olib tashlaydi).
+            /// Ruxsat etilgan maksimal uzunlik — [`MAX_TOKEN_LEN`].
+            pub const MAX_LEN: usize = $crate::token_types::MAX_TOKEN_LEN;
+
+            /// Bo'sh bo'lmagan matndan token yasaydi (ikki yonidagi bo'sh joylarni olib tashlaydi).
+            ///
+            /// # Xatolar
+            ///
+            /// - [`TokenError::Empty`] — trim qilingandan keyin matn bo'sh qolsa;
+            /// - [`TokenError::TooLong`] — uzunlik [`MAX_TOKEN_LEN`] dan oshsa.
             #[inline]
             pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
                 let raw = value.as_ref().trim();
 
-                if raw.is_empty() {
-                    return Err(TypeError::Token(TokenError::Empty));
-                }
+                Self::validate(raw)?;
 
                 Ok(Self(raw.to_string()))
+            }
+
+            /// Ichki validatsiya (xotira ajratmaydi).
+            #[inline]
+            fn validate(raw: &str) -> Result<(), TokenError> {
+                if raw.is_empty() {
+                    return Err(TokenError::Empty);
+                }
+
+                if raw.len() > Self::MAX_LEN {
+                    return Err(TokenError::TooLong);
+                }
+
+                Ok(())
             }
 
             /// Tokenning ichki matn qiymatini (`&str`) qaytaradi.
@@ -77,7 +108,23 @@ macro_rules! define_token_type {
             }
         }
 
-        // Tokenni matn ko'rinishida chiqarish (print) imkonini beradi.
+        /// Tokenni matn ko'rinishida chiqarish (print) imkonini beradi.
+        ///
+        /// # ⚠️ Xavfsizlik ogohlantirishi
+        ///
+        /// `Debug` (`{:?}`) qiymatni yashiradi, lekin **`Display` (`{}`) va
+        /// `.to_string()` sirni to'liq ochib beradi**. Quyidagilar tokenni
+        /// log fayliga tushiradi:
+        ///
+        /// ```text
+        /// tracing::info!("token: {}", token);   // ❌ sir logga tushadi
+        /// println!("{}", token);                // ❌
+        /// format!("{token}")                    // ❌
+        /// ```
+        ///
+        /// Loglashda `{:?}` dan foydalaning. Haqiqiy qiymat faqat uni
+        /// tashqi xizmatga uzatish kerak bo'lgan joyda — `as_str()` yoki
+        /// `into_inner()` orqali olinsin.
         impl std::fmt::Display for $Name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str(&self.0)
@@ -111,12 +158,9 @@ macro_rules! define_token_type {
             fn try_from(value: String) -> Result<Self, TypeError> {
                 let trimmed_len = value.trim().len();
 
-                if trimmed_len == 0 {
-                    return Err(TypeError::Token(TokenError::Empty));
-                }
-
                 // Agar u allaqachon trim qilingan bo'lsa, xotirani qayta ishlatamiz.
                 if value.len() == trimmed_len {
+                    Self::validate(&value)?;
                     Ok(Self(value))
                 } else {
                     Self::parse(value)
@@ -228,5 +272,63 @@ mod tests {
 
         let restored: AccessToken = serde_json::from_str(&json).unwrap();
         assert_eq!(token, restored);
+    }
+
+    #[test]
+    fn parse_should_reject_tokens_over_max_len() {
+        // Chegaraning o'zi qabul qilinadi
+        let at_limit = "a".repeat(MAX_TOKEN_LEN);
+        assert!(AccessToken::parse(&at_limit).is_ok());
+
+        // Bir bayt ortiq — rad etiladi
+        let over_limit = "a".repeat(MAX_TOKEN_LEN + 1);
+        assert!(matches!(
+            AccessToken::parse(&over_limit).unwrap_err(),
+            TypeError::Token(TokenError::TooLong)
+        ));
+    }
+
+    #[test]
+    fn try_from_string_should_also_enforce_max_len() {
+        let over_limit = "a".repeat(MAX_TOKEN_LEN + 1);
+
+        // Zero-allocation yo'li (trim kerak emas)
+        assert!(matches!(
+            RefreshToken::try_from(over_limit.clone()).unwrap_err(),
+            TypeError::Token(TokenError::TooLong)
+        ));
+
+        // Trim qilinadigan yo'l
+        assert!(matches!(
+            RefreshToken::try_from(format!("  {over_limit}  ")).unwrap_err(),
+            TypeError::Token(TokenError::TooLong)
+        ));
+    }
+
+    #[test]
+    fn deserialization_should_reject_oversized_tokens() {
+        let json = format!("\"{}\"", "a".repeat(MAX_TOKEN_LEN + 1));
+        assert!(serde_json::from_str::<AccessToken>(&json).is_err());
+    }
+
+    #[test]
+    fn client_id_and_secret_behave_like_tokens() {
+        assert_eq!(ClientId::parse(" id-1 ").unwrap().as_str(), "id-1");
+        assert_eq!(ClientSecret::parse("s3cr3t").unwrap().as_str(), "s3cr3t");
+
+        assert!(ClientId::parse("").is_err());
+        assert!(ClientSecret::parse("  ").is_err());
+    }
+
+    #[test]
+    fn debug_should_redact_but_display_should_not() {
+        let secret = ClientSecret::parse("top-secret").unwrap();
+
+        // Debug — yashiringan
+        assert!(!format!("{secret:?}").contains("top-secret"));
+        assert!(format!("{secret:?}").contains("REDACTED"));
+
+        // Display — ochiq (hujjatlashtirilgan xatti-harakat, 0.18 da o'zgaradi)
+        assert_eq!(format!("{secret}"), "top-secret");
     }
 }
