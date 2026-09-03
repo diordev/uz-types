@@ -12,7 +12,7 @@ _Hozircha bo'sh._
 
 ---
 
-## [0.18.0] — 2026-09-XX <!-- reliz kuni sanani to'ldiring -->
+## [0.18.0] — 2026-09-03
 
 Bu relizning maqsadi — crate'ni **1.0 ga tayyorlash**: barcha breaking o'zgarishlar
 bitta relizda chiqariladi, keyingi relizlar faqat additive bo'ladi.
@@ -45,15 +45,16 @@ To'liq ro'yxat va o'rniga nima ishlatish — quyidagi [migratsiya jadvali](#migr
 
 **Feature'lar** (`Cargo.toml`):
 
+
 | Feature             | Default | Nima beradi                                                         |
 | ------------------- | ------- | ------------------------------------------------------------------- |
 | `date`              | ✅      | `BirthDate`, `DateFormat`, `Pinfl::birth_date()` (`chrono`)         |
 | `id`                | ✅      | `Id<Tag>`, `NumId<Tag>`, `JobId`, `SessionId`, `RequestId` (`uuid`) |
-| `serde`             |         | `Serialize`/`Deserialize` (sirlar — faqat `Deserialize`)            |
-| `sqlx`              |         | `Type`/`Encode`/`Decode` — driver'ga bog'liq emas                   |
+| `serde`             |         | `Serialize`/`Deserialize` (sirlar — faqat `Deserialize`)           |
+| `sqlx`              |         | `Type`/`Encode`/`Decode` — driver'ga bog'liq emas                  |
 | `sqlx-postgres`     |         | `sqlx` + `PgHasArrayType` (`Vec<T>`, `= ANY($1)`)                   |
-| `zeroize`           |         | Sir tiplari `Drop` da xotirani tozalaydi                            |
-| `serialize-secrets` |         | Sir tiplari uchun `Serialize`                                       |
+| `zeroize`           |         | Sir tiplari`Drop` da xotirani tozalaydi                             |
+| `serialize-secrets` |         | Sir tiplari uchun`Serialize`                                        |
 
 **sqlx integratsiyasi** (`sqlx` / `sqlx-postgres` feature): `Passport`, `Pinfl`,
 `PhoneNumber`, `EmailAddress`, `ClientId` → `TEXT`; `BirthDate` → `DATE`;
@@ -193,34 +194,35 @@ uz-types = { version = "0.18", features = ["serde", "sqlx-postgres"] }
 
 Kod:
 
+
 | 0.17                                                         | 0.18                                                                                        |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | `Passport::parse(s) -> Result<_, TypeError>`                 | `-> Result<_, PassportError>`; `?` avvalgidek `TypeError` ga o'tadi                         |
 | `Passport::parse(some_string)` (`impl AsRef<str>`)           | `Passport::parse(&some_string)`                                                             |
 | `passport.starts_with("AA")` (Deref)                         | `passport.as_str().starts_with("AA")`                                                       |
 | `TypeError::PINFL(_)`                                        | `TypeError::Pinfl(_)`                                                                       |
-| `TypeError::Validation` / `TypeError::validation()`          | o'chirildi — o'z domeningiz uchun alohida error tipi yarating                               |
-| `EmailAddress::parse("a@b")` → `Err(Length)`                 | → `Err(Format)`                                                                             |
-| `PhoneNumber::parse("998000000000")` → `Err(OperatorCode)`   | → `Ok`; `parse_strict()` → `Err(UnknownOperatorCode)`                                       |
+| `TypeError::Validation` / `TypeError::validation()`          | o'chirildi — o'z domeningiz uchun alohida error tipi yarating                              |
+| `EmailAddress::parse("a@b")` → `Err(Length)`                | →`Err(Format)`                                                                             |
+| `PhoneNumber::parse("998000000000")` → `Err(OperatorCode)`  | →`Ok`; `parse_strict()` → `Err(UnknownOperatorCode)`                                      |
 | `PhoneNumber::is_known_operator_code(code)`                  | `phone.is_known_operator()`                                                                 |
 | `PhoneNumber::REGIONAL_CODE_RANGE.0 / .1`                    | `PhoneNumber::REGIONAL_CODES.start() / .end()`                                              |
 | `format!("{token}")`, `token.as_str()`, `token.into_inner()` | `token.expose_secret()`                                                                     |
 | `serde_json::to_string(&access_token)`                       | `serialize-secrets` feature, yoki struct'da `access_token: &str` maydon (`expose_secret()`) |
-| `ClientId` sir sifatida (`{:?}` yashirilgan)                 | oddiy tip: `Display`, `as_str()`; `Debug` ochiq                                             |
+| `ClientId` sir sifatida (`{:?}` yashirilgan)                 | oddiy tip:`Display`, `as_str()`; `Debug` ochiq                                              |
 | `JobId::generate()` / `generate_v7()`                        | `JobId::new_v4()` / `JobId::now_v7()`                                                       |
-| `JobId::parse("42")` → `Ok` (raqam)                          | → `Err(IdError::Uuid)`; raqamli ID uchun `NumId<Tag>`                                       |
+| `JobId::parse("42")` → `Ok` (raqam)                         | →`Err(IdError::Uuid)`; raqamli ID uchun `NumId<Tag>`                                       |
 | `id.as_uuid() -> Option<&Uuid>`                              | `id.as_uuid() -> &Uuid`                                                                     |
 | `id.as_number() -> Option<u64>`                              | `NumId<Tag>::get() -> u64`                                                                  |
 | `id.uuid_version()`                                          | `id.version()`                                                                              |
-| v1/v3/v5 UUID → `Err(IdError::Version)`                      | `Ok`; kerak bo'lsa `id.version()` bilan tekshiring                                          |
+| v1/v3/v5 UUID →`Err(IdError::Version)`                      | `Ok`; kerak bo'lsa `id.version()` bilan tekshiring                                          |
 | `Reuid`                                                      | `pub enum MyTag {}` + `type MyId = Id<MyTag>;`                                              |
-| ID JSON: `"uuid"` yoki `123`                                 | `Id` — faqat `"uuid"`; `NumId` — faqat `123` (`"123"` string emas)                          |
+| ID JSON:`"uuid"` yoki `123`                                  | `Id` — faqat `"uuid"`; `NumId` — faqat `123` (`"123"` string emas)                        |
 | `BirthDate::from_naive_date_with_today(d, today)`            | `BirthDate::from_naive_date_at(d, today)`                                                   |
 | `birth_date.into_inner()`                                    | `birth_date.as_naive_date()`                                                                |
 | `birth_date.leap_year()` (Deref)                             | `birth_date.as_naive_date().leap_year()`                                                    |
 | `birth_date.format_reversed(fmt)`                            | `birth_date.format_as(fmt.reversed())`                                                      |
 | `DateFormat::as_str()`                                       | `DateFormat::pattern()`                                                                     |
-| `match date_format { … }` (to'liq)                           | `_` tarmog'i qo'shing (`#[non_exhaustive]`)                                                 |
+| `match date_format { … }` (to'liq)                          | `_` tarmog'i qo'shing (`#[non_exhaustive]`)                                                 |
 | MSRV 1.85                                                    | 1.94 (`rustup update`)                                                                      |
 
 Compiler yordam beradi: yuqoridagi o'zgarishlarning deyarli hammasi compile error sifatida
