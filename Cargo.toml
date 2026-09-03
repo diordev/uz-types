@@ -1,6 +1,6 @@
 [package]
 name = "uz-types"
-version = "0.17.0"
+version = "0.18.0"
 authors = ["Diyorbek Abdumutalibov <diordev@icloud.com>"]
 license = "MIT OR Apache-2.0"
 description = "Rust loyihalar uchun qayta ishlatiladigan type, value object va domain model'lar kutubxonasi."
@@ -11,7 +11,7 @@ keywords = ["types", "value-object", "domain-model", "validation", "uzbekistan"]
 categories = ["data-structures", "rust-patterns"]
 
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.94"
 
 include = [
     "README.md",
@@ -22,14 +22,42 @@ include = [
     "src/**/*.rs",
     "examples/**/*.rs",
     "tests/**/*.rs",
+    "benches/*.rs"
 ]
 
+[features]
+default = ["date", "id"]
+date = ["dep:chrono", "sqlx?/chrono"]
+id = ["dep:uuid", "sqlx?/uuid"]
+serde = ["dep:serde", "uuid?/serde"]
+sqlx = ["dep:sqlx"]
+sqlx-postgres = ["sqlx", "sqlx/postgres"]
+zeroize = ["dep:zeroize"]
+serialize-secrets = ["serde"]
+
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
-serde = { version = "1", features = ["derive"] }
 thiserror = "2"
-uuid = { version = "1.24.0", features = ["v4", "v7"] }
+subtle = { version = "2.6", default-features = false }
+chrono = { version = "0.4", optional = true, default-features = false, features = ["std", "clock"] }
+uuid = { version = "1.26", optional = true, default-features = false, features = ["std", "v4", "v7"] }
+serde = { version = "1", optional = true, default-features = false, features = ["std"] }
+sqlx = { version = "0.9", optional = true, default-features = false }
+zeroize = { version = "1", optional = true, default-features = false, features = ["alloc"] }
 
 
 [dev-dependencies]
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+proptest = "1"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dev-dependencies.criterion]
+version = "0.8"
+default-features = false
+
+[[bench]]
+name = "parse"
+harness = false

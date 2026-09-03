@@ -33,11 +33,16 @@ doc:
 # ==========================================
 
 # CI dagi tekshiruvlarning aynan o'zi — commit'dan oldin shuni ishlataman.
-check: fmt-check lint test doc-check
+check: fmt-check lint test audit doc-check
 
 # Format tekshiruvi
 fmt-check:
     cargo fmt --all -- --check
+
+# Audit tekshiruv
+audit:
+    cargo audit && cargo machete --with-metadata
+
 
 # Rustdoc ogohlantirishlari xato sifatida — buzuq havolalarni tutadi
 doc-check:
@@ -46,7 +51,7 @@ doc-check:
 # Talab: rustup toolchain install 1.85.0
 # Cargo.toml dagi rust-version (1.85) bilan build
 msrv:
-    cargo +1.85.0 check --all-targets --all-features
+    cargo +1.94.0 check --all-targets --all-features
 
 # ==========================================
 # RELIZ

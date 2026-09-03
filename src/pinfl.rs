@@ -1,313 +1,188 @@
-use serde::{self, Deserialize, Serialize};
-use std::borrow::Cow;
-use std::ops::Deref;
+use crate::macros::string_newtype;
 
-use crate::error::TypeError;
+string_newtype! {
+    /// JShShIR / PINFL — 14 raqamli shaxsiy identifikatsiya raqami.
+    ///
+    /// `parse()` faqat **strukturani** (14 ta ASCII raqam) tekshiradi.
+    /// Nazorat raqami, jins/asr belgisi va tug'ilgan sana — query metodlar
+    /// (`is_checksum_valid`, `gender`, `birth_date`) yoki [`Pinfl::parse_strict`].
+    pub struct Pinfl;
+    error = PinflError;
+    expecting = "a PINFL: exactly 14 digits";
+}
 
-/// Jismoniy shaxsning Yagona Identifikatsiya Raqami (PINFL).
-///
-/// O'zbekiston fuqarolarining 14 xonali identifikatsiya raqami.
-///
-/// # Format
-///
-/// - Aynan **14 ta** ASCII raqam
-/// - Harflar, bo'shliqlar yoki maxsus belgilar qabul qilinmaydi
-/// - Kirish: `12345678901234`
-///
-/// # ⚠️ Tekshiruv doirasi
-///
-/// **Faqat format tekshiriladi** — uzunlik va raqamlardan iboratlik.
-/// Quyidagilar tekshirilmaydi:
-///
-/// - nazorat summasi (checksum, 14-raqam);
-/// - 1-raqamdagi jins/asr belgisi;
-/// - 2–7 raqamlardagi tug'ilgan sana strukturasi.
-///
-/// Shu sababli `00000000000000` kabi mavjud bo'lmagan raqam ham qabul
-/// qilinadi. Agar sizga haqiqiy PINFL kafolati kerak bo'lsa, uni davlat
-/// xizmati (masalan `my.gov.uz` yoki idoraviy API) orqali alohida
-/// tasdiqlashingiz zarur.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Pinfl(String);
+/// PINFL 1-raqamidan olinadigan jins.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Gender {
+    /// Erkak (1-raqam toq: 1, 3, 5).
+    Male,
+    /// Ayol (1-raqam juft: 2, 4, 6).
+    Female,
+}
 
 impl Pinfl {
-    /// PINFL uzunligi — aynan 14 ta raqam.
+    /// Uzunlik — aynan 14 raqam.
     pub const LEN: usize = 14;
 
-    /// Ichki validatsiya logikasi (Xotira ajratmaydi).
-    fn validate(pinfl: &str) -> Result<(), PinflError> {
-        if pinfl.len() != Self::LEN {
+    /// Nazorat raqami vaznlari (VM qarori №177, 12.04.2022: "7 3 1" takrorlanadi, modul 10).
+    const WEIGHTS: [u32; 3] = [7, 3, 1];
+
+    fn normalize(_: &mut str) {}
+
+    fn validate(s: &str) -> Result<(), PinflError> {
+        if s.len() != Self::LEN {
             return Err(PinflError::Length);
         }
-        if !pinfl.bytes().all(|b| b.is_ascii_digit()) {
+        if !s.bytes().all(|b| b.is_ascii_digit()) {
             return Err(PinflError::Format);
         }
         Ok(())
     }
 
-    /// `&str` yoki `String` kabi qiymatlardan `Pinfl` yaratadi:
-    /// trim qiladi va formatni tekshiradi.
-    ///
-    /// # Xatolar
-    ///
-    /// [`PinflError`] qaytaradi agar:
-    /// - Uzunlik [`Self::LEN`] ga teng bo'lmasa;
-    /// - Raqamdan boshqa belgi uchrasa.
-    #[inline]
-    pub fn parse(value: impl AsRef<str>) -> Result<Self, TypeError> {
-        let pinfl = value.as_ref().trim();
-
-        Self::validate(pinfl)?; // `?` operatori avtomatik .into() ni chaqiradi
-
-        Ok(Self(pinfl.to_owned()))
+    /// Struktura + nazorat raqami + jins/asr belgisi + tug'ilgan sana — hammasi tekshiriladi.
+    pub fn parse_strict(value: &str) -> Result<Self, PinflError> {
+        let pinfl = Self::parse(value)?;
+        if !pinfl.is_checksum_valid() {
+            return Err(PinflError::Checksum);
+        }
+        if pinfl.gender().is_none() || pinfl.birth_date_parts().is_none() {
+            return Err(PinflError::Structure);
+        }
+        Ok(pinfl)
     }
 
-    /// Pinfl qiymatini `&str` sifatida qaytaradi.
     #[inline]
+    fn digit(&self, index: usize) -> u32 {
+        u32::from(self.0.as_bytes()[index] - b'0')
+    }
+
+    /// 14-raqam rasmiy algoritm bo'yicha to'g'rimi (7‑3‑1 vaznlar, mod 10).
     #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
+    pub fn is_checksum_valid(&self) -> bool {
+        let sum: u32 = (0..Self::LEN - 1)
+            .map(|i| self.digit(i) * Self::WEIGHTS[i % 3])
+            .sum();
+        sum % 10 == self.digit(Self::LEN - 1)
     }
 
-    /// Ichki String qiymatni qaytaradi (Ownership ko'chadi).
-    #[inline]
+    /// 1-raqam: jins (1,3,5 — erkak; 2,4,6 — ayol). Boshqa qiymat → `None`.
     #[must_use]
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-}
-
-// ==========================================
-// DEFAULT TRAITLAR
-// ==========================================
-
-/// `Deref` tufayli `Pinfl` obyektida `String`/`&str` metodlarini (masalan, .starts_with(), .chars())
-/// to'g'ridan-to'g'ri chaqirish mumkin bo'ladi.
-impl Deref for Pinfl {
-    type Target = str;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-/// Pinfl qiymatini `&str` sifatida ishlatish imkonini beradi.
-impl AsRef<str> for Pinfl {
-    #[inline]
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-/// Pinfl qiymatini string ko'rinishida chiqaradi.
-impl std::fmt::Display for Pinfl {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-/// Rust'ning standart idiomatik parse uslubi (`"12345678901234".parse::<Pinfl>()`).
-impl std::str::FromStr for Pinfl {
-    type Err = TypeError;
-
-    #[inline]
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::parse(s)
-    }
-}
-
-/// `&str` dan `Pinfl` yaratish.
-impl TryFrom<&str> for Pinfl {
-    type Error = TypeError;
-
-    fn try_from(value: &str) -> Result<Self, TypeError> {
-        Self::parse(value)
-    }
-}
-
-/// `String` dan `Pinfl` yaratish.
-impl TryFrom<String> for Pinfl {
-    type Error = TypeError;
-
-    fn try_from(value: String) -> Result<Self, TypeError> {
-        let trimmed_len = value.trim().len();
-
-        // Agar String ichida bo'sh joy bo'lmasa, XOTIRANI QAYTA ISHLATAMIZ (Zero-allocation)
-        if trimmed_len == value.len() {
-            Self::validate(&value)?;
-            Ok(Self(value))
-        } else {
-            // Agar bo'sh joylar bo'lsa, trim qilib yangitdan parse qilamiz
-            Self::parse(value.trim())
+    pub fn gender(&self) -> Option<Gender> {
+        match self.digit(0) {
+            1 | 3 | 5 => Some(Gender::Male),
+            2 | 4 | 6 => Some(Gender::Female),
+            _ => None,
         }
     }
-}
 
-/// `Pinfl` ni `String` ga o'tkazadi (Ownership ko'chadi).
-impl From<Pinfl> for String {
-    fn from(value: Pinfl) -> Self {
-        value.into_inner()
-    }
-}
-
-// ==========================================
-// SERDE OPTIMIZATSIYASI
-// ==========================================
-
-/// Serializatsiya paytida `.clone()` olinishining oldini olish uchun manual implementatsiya.
-impl Serialize for Pinfl {
-    #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.as_str()) // Nusxa (clone) olmaydi!
-    }
-}
-
-/// JSON'dan o'qish jarayonida zero-copy (`&str`) va zarur hollarda `String` xotirasini qayta ishlash uchun.
-impl<'de> Deserialize<'de> for Pinfl {
-    #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = Cow::<'de, str>::deserialize(deserializer)?;
-
-        match s {
-            // Borrow qilingan bo'lsa: zero-allocation &str orqali yasaladi
-            Cow::Borrowed(borrowed) => Self::try_from(borrowed).map_err(serde::de::Error::custom),
-            // Owned (String) bo'lsa: tayyor String xotirasi TryFrom<String> ga uzatiladi
-            Cow::Owned(owned) => Self::try_from(owned).map_err(serde::de::Error::custom),
+    /// 1-raqam: asr (1,2 → 1800; 3,4 → 1900; 5,6 → 2000).
+    #[must_use]
+    pub fn century(&self) -> Option<i32> {
+        match self.digit(0) {
+            1 | 2 => Some(1800),
+            3 | 4 => Some(1900),
+            5 | 6 => Some(2000),
+            _ => None,
         }
     }
-}
 
-// ==========================================
-// XATOLIKLAR ENUMI
-// ==========================================
+    /// 2–7 raqamlar `DDMMYY` + asr → `(yil, oy, kun)`. Oddiy diapazon tekshiruvi
+    /// (kun 1..=31, oy 1..=12); kalendar to'g'riligini `birth_date()` tekshiradi.
+    #[must_use]
+    pub fn birth_date_parts(&self) -> Option<(i32, u32, u32)> {
+        let century = self.century()?;
+        let day = self.digit(1) * 10 + self.digit(2);
+        let month = self.digit(3) * 10 + self.digit(4);
+        let year = century + i32::try_from(self.digit(5) * 10 + self.digit(6)).ok()?;
+        ((1..=31).contains(&day) && (1..=12).contains(&month)).then_some((year, month, day))
+    }
+
+    /// 8–10 raqamlar: tug'ilgan hudud kodi.
+    #[inline]
+    #[must_use]
+    pub fn region_code(&self) -> &str {
+        &self.0[7..10]
+    }
+
+    /// 11–13 raqamlar: tartib raqami.
+    #[inline]
+    #[must_use]
+    pub fn serial(&self) -> &str {
+        &self.0[10..13]
+    }
+
+    /// PINFL ichidagi tug'ilgan sana (kalendar bo'yicha haqiqiy bo'lsa).
+    #[cfg(feature = "date")]
+    #[must_use]
+    pub fn birth_date(&self) -> Option<crate::BirthDate> {
+        let (y, m, d) = self.birth_date_parts()?;
+        let date = chrono::NaiveDate::from_ymd_opt(y, m, d)?;
+        crate::BirthDate::from_naive_date(date).ok()
+    }
+}
 
 /// `Pinfl` validatsiya xatolari.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum PinflError {
-    /// PINFL uzunligi noto'g'ri (14 ta raqam bo'lishi kerak).
+    /// 14 ta raqam emas.
     #[error("pinfl length is invalid, expected 14 digits")]
     Length,
-
-    /// PINFL formati noto'g'ri (faqat raqamlardan iborat bo'lishi kerak).
-    #[error("pinfl format is incorrect, expected only digits")]
+    /// Raqamdan boshqa belgi bor.
+    #[error("pinfl format is invalid, expected only digits")]
     Format,
+    /// Nazorat raqami mos kelmaydi (faqat `parse_strict`).
+    #[error("pinfl checksum is invalid")]
+    Checksum,
+    /// Jins/asr belgisi yoki tug'ilgan sana strukturasi noto'g'ri (faqat `parse_strict`).
+    #[error("pinfl structure is invalid (gender/century digit or birth date)")]
+    Structure,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const VALID_PINFL: &str = "12345678901234";
+    // Rasmiy hujjatlardagi misollar: VM qarori №200 (1996) va №177 (2022).
+    const OFFICIAL_1996: &str = "31210632040244";
+    const OFFICIAL_2022: &str = "31210932040247";
 
-    // 1. To'g'ri PINFL parse qilinishi
     #[test]
-    fn test_valid_pinfl_parse() {
-        let pinfl = Pinfl::parse(VALID_PINFL).expect("Valid PINFL parse bo'lishi kerak");
-        assert_eq!(pinfl.as_str(), VALID_PINFL);
+    fn official_examples_pass_strict() {
+        for s in [OFFICIAL_1996, OFFICIAL_2022] {
+            let p = Pinfl::parse_strict(s).unwrap();
+            assert!(p.is_checksum_valid());
+            assert_eq!(p.gender(), Some(Gender::Male));
+            assert_eq!(p.region_code(), "204");
+            assert_eq!(p.serial(), "024");
+        }
+        assert_eq!(
+            Pinfl::parse(OFFICIAL_1996).unwrap().birth_date_parts(),
+            Some((1963, 10, 12))
+        );
+        assert_eq!(
+            Pinfl::parse(OFFICIAL_2022).unwrap().birth_date_parts(),
+            Some((1993, 10, 12))
+        );
     }
 
-    // 2. Boshidagi va oxiridagi bo'sh joylar (whitespace) trim qilinishi
     #[test]
-    fn test_pinfl_trim_whitespace() {
-        let input = "  12345678901234 \n\t";
-        let pinfl = Pinfl::parse(input).expect("Probel bo'lsa ham parse bo'lishi kerak");
-        assert_eq!(pinfl.as_str(), VALID_PINFL);
+    fn structural_parse_is_lenient_strict_is_not() {
+        let zeros = "00000000000000";
+        assert!(Pinfl::parse(zeros).is_ok()); // struktura: 14 raqam
+        assert_eq!(Pinfl::parse_strict(zeros), Err(PinflError::Structure)); // checksum 0 == 0, lekin 1-raqam 0
+        assert_eq!(
+            Pinfl::parse_strict("31210632040245"),
+            Err(PinflError::Checksum)
+        );
+        assert_eq!(Pinfl::parse("1234567890123"), Err(PinflError::Length));
+        assert_eq!(Pinfl::parse("1234567890123a"), Err(PinflError::Format));
     }
 
-    // 3. Uzunlik xatolari (14 ta raqamdan kam yoki ko'p)
+    #[cfg(feature = "date")]
     #[test]
-    fn test_invalid_length() {
-        // Qisqa (13 ta)
-        assert!(Pinfl::parse("1234567890123").is_err());
-
-        // Uzun (15 ta)
-        assert!(Pinfl::parse("123456789012345").is_err());
-
-        // Bo'sh string
-        assert!(Pinfl::parse("").is_err());
-    }
-
-    // 4. Format xatolari (Raqam bo'lmagan belgilar)
-    #[test]
-    fn test_invalid_format() {
-        // Harf qatnashgan
-        assert!(Pinfl::parse("1234567890123a").is_err());
-
-        // Maxsus belgi qatnashgan
-        assert!(Pinfl::parse("123456789012-4").is_err());
-
-        // O'rtasida bo'sh joy bor
-        assert!(Pinfl::parse("12345 67890123").is_err());
-    }
-
-    // 5. Deref va AsRef traitlari ishlashi
-    #[test]
-    fn test_deref_and_as_ref() {
-        let pinfl = Pinfl::parse(VALID_PINFL).unwrap();
-
-        // Deref tufayli &str metodlarini to'g'ridan-to'g'ri chaqirish
-        assert_eq!(pinfl.len(), 14);
-        assert!(pinfl.starts_with("123"));
-
-        // AsRef ishlashi
-        assert_eq!(pinfl.as_ref(), VALID_PINFL);
-    }
-
-    // 6. TryFrom<&str> va TryFrom<String>
-    #[test]
-    fn test_try_from_conversions() {
-        // &str -> Pinfl
-        let pinfl1 = Pinfl::try_from(VALID_PINFL).unwrap();
-        assert_eq!(pinfl1.as_str(), VALID_PINFL);
-
-        // String -> Pinfl (Zero-allocation yo'li)
-        let s = String::from(VALID_PINFL);
-        let pinfl2 = Pinfl::try_from(s).unwrap();
-        assert_eq!(pinfl2.as_str(), VALID_PINFL);
-
-        // String -> Pinfl (Trim qilinadigan yo'li)
-        let s_padded = String::from("  12345678901234  ");
-        let pinfl3 = Pinfl::try_from(s_padded).unwrap();
-        assert_eq!(pinfl3.as_str(), VALID_PINFL);
-    }
-
-    // 7. From<Pinfl> for String va Display
-    #[test]
-    fn test_display_and_into_string() {
-        let pinfl = Pinfl::parse(VALID_PINFL).unwrap();
-
-        // Display trait
-        assert_eq!(format!("{}", pinfl), VALID_PINFL);
-
-        // Into<String>
-        let s: String = pinfl.into();
-        assert_eq!(s, VALID_PINFL);
-    }
-
-    // 8. Serde (Serialize / Deserialize) mosligi
-    #[test]
-    fn test_serde_serialization() {
-        let pinfl = Pinfl::parse(VALID_PINFL).unwrap();
-
-        // JSON ga o'girish (Serializatsiya)
-        let json = serde_json::to_string(&pinfl).unwrap();
-        assert_eq!(json, format!("\"{}\"", VALID_PINFL));
-
-        // JSON dan o'qish (To'g'ri qiymat)
-        let deserialized: Pinfl = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized, pinfl);
-
-        // JSON dan o'qish (Noto'g'ri qiymat deserialization xatosini berishi kerak)
-        let invalid_json = "\"12345\"";
-        let res: Result<Pinfl, _> = serde_json::from_str(invalid_json);
-        assert!(res.is_err());
+    fn birth_date_is_extracted() {
+        let p = Pinfl::parse(OFFICIAL_2022).unwrap();
+        assert_eq!(p.birth_date().unwrap().to_string(), "1993-10-12");
     }
 }

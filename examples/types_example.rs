@@ -56,20 +56,15 @@ fn main() -> Result<(), TypeError> {
     println!();
 
     // v4 — tasodifiy; v7 — vaqt bo'yicha tartiblangan (DB indeksi uchun afzal)
-    println!("JobId (v4):      {}", JobId::generate());
-    println!("SessionId (v7):  {}", SessionId::generate_v7());
-    println!("RequestId (v7):  {}", RequestId::generate_v7());
+    println!("JobId (v4):      {}", JobId::new_v4());
+    println!("SessionId (v7):  {}", SessionId::now_v7());
+    println!("RequestId (v7):  {}", RequestId::now_v7());
 
     // Mavjud qiymatni parse qilish — UUID yoki u64
-    let numeric_id = Reuid::parse("444444")?;
     let uuid_id = JobId::parse("9b7e597e-893e-4e11-92cf-f4e7d4f923b1")?;
     println!(
-        "Reuid (raqam):   {numeric_id} -> as_number(): {:?}",
-        numeric_id.as_number()
-    );
-    println!(
         "JobId (UUID):    {uuid_id} -> versiya: {:?}",
-        uuid_id.uuid_version()
+        uuid_id.version()
     );
 
     // ---------- Tokenlar ----------
@@ -88,25 +83,9 @@ fn main() -> Result<(), TypeError> {
 
     // Haqiqiy qiymat faqat tashqi xizmatga uzatishda olinadi
     println!(
-        "\n(Authorization header uchun) Bearer {}...",
-        &access_token.as_str()[..10]
+        "\n(Authorization header uchun) Bearer {:#?}...",
+        access_token
     );
-
-    // ---------- Xatolarni ajratish ----------
-    println!();
-
-    for input in ["AA1234567", "AA123", "A11234567"] {
-        match Passport::parse(input) {
-            Ok(p) => println!("{input:<12} -> OK: {p}"),
-            Err(TypeError::Passport(PassportError::Length)) => {
-                println!("{input:<12} -> uzunlik noto'g'ri")
-            }
-            Err(TypeError::Passport(PassportError::Format)) => {
-                println!("{input:<12} -> format noto'g'ri")
-            }
-            Err(e) => println!("{input:<12} -> boshqa xato: {e}"),
-        }
-    }
 
     Ok(())
 }
