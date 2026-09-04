@@ -1,6 +1,6 @@
 [package]
 name = "uz-types"
-version = "0.18.0"
+version = "0.19.0"
 authors = ["Diyorbek Abdumutalibov <diordev@icloud.com>"]
 license = "MIT OR Apache-2.0"
 description = "Rust loyihalar uchun qayta ishlatiladigan type, value object va domain model'lar kutubxonasi."
@@ -11,7 +11,10 @@ keywords = ["types", "value-object", "domain-model", "validation", "uzbekistan"]
 categories = ["data-structures", "rust-patterns"]
 
 edition = "2024"
-rust-version = "1.94"
+# Edition 2024 chegarasi. `sqlx` feature'i alohida 1.94+ talab qiladi (sqlx 0.9),
+# lekin u optional — cargo per-feature MSRV'ni qo'llab-quvvatlamaydi, shuning uchun
+# bu yerda eng past umumiy qiymat turadi. Qarang: README § MSRV va semver.
+rust-version = "1.85"
 
 include = [
     "README.md",
@@ -61,3 +64,9 @@ default-features = false
 [[bench]]
 name = "parse"
 harness = false
+
+# Example `BirthDate` va `JobId` ishlatadi — busiz
+# `cargo check --all-targets --no-default-features` kompilyatsiya bo'lmaydi.
+[[example]]
+name = "types_example"
+required-features = ["date", "id"]

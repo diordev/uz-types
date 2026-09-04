@@ -43,6 +43,9 @@ impl DateFormat {
 /// Kelajak tekshiruvi **monoton**: bir marta qabul qilingan sana keyinchalik hech
 /// qachon rad etilmaydi — shuning uchun replay/`Deserialize` uchun xavfsiz.
 /// Deterministik testlar uchun `*_at(…, today)` variantlari bor.
+///
+/// [`MIN_YEAR`](Self::MIN_YEAR) — **sanity floor**, biznes qoidasi emas: yosh chegarasini
+/// (`>= 18`, `<= 120` va h.k.) [`age_at`](Self::age_at) bilan ilova qatlamida qo'ying.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BirthDate(NaiveDate);
 
@@ -50,7 +53,13 @@ impl BirthDate {
     /// Standart format.
     pub const DEFAULT_FORMAT: DateFormat = DateFormat::YmdHyphen;
     /// Eng erta qabul qilinadigan yil.
-    pub const MIN_YEAR: i32 = 1900;
+    ///
+    /// 1800 — chunki PINFL 1-raqami `1`/`2` bo'lganda asr 1800 bo'ladi
+    /// ([`Pinfl::century`](crate::Pinfl::century)); `1900` da [`Pinfl::birth_date`]
+    /// bunday PINFL uchun har doim `None` qaytarardi.
+    ///
+    /// [`Pinfl::birth_date`]: crate::Pinfl::birth_date
+    pub const MIN_YEAR: i32 = 1800;
 
     /// `YYYY-MM-DD` dan (bugun = UTC).
     pub fn parse(value: &str) -> Result<Self, BirthDateError> {
@@ -244,7 +253,9 @@ mod tests {
             BirthDate::parse_with_format_at("2026-09-05", DateFormat::YmdHyphen, today),
             Err(BirthDateError::FutureDate)
         );
-        assert_eq!(BirthDate::parse("1899-12-31"), Err(BirthDateError::TooOld));
+        // MIN_YEAR = 1800: PINFL 1-raqami `1`/`2` bo'lganda asr 1800 bo'ladi.
+        assert!(BirthDate::parse("1800-01-01").is_ok());
+        assert_eq!(BirthDate::parse("1799-12-31"), Err(BirthDateError::TooOld));
         assert_eq!(BirthDate::parse("15.05.1990"), Err(BirthDateError::Date));
         assert_eq!(BirthDate::parse("1990-05-15").unwrap().age_at(today), 36);
     }

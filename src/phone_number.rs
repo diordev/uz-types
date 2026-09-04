@@ -4,7 +4,8 @@ string_newtype! {
     /// O'zbekiston telefon raqami — ichkarida har doim `998` + 9 raqam (12 raqam, `+` siz).
     ///
     /// `parse()` **strukturani** tekshiradi va formatga toqatli:
-    /// `+998 (90) 123-45-67`, `998901234567`, `+998901234567` — hammasi `998901234567`.
+    /// `+998 (90) 123-45-67`, `998.90.123.45.67`, `+998901234567` — hammasi `998901234567`.
+    /// Tashlab yuboriladigan ajratuvchilar: bo'shliq, `-`, `(`, `)`, `.` va boshidagi `+`.
     /// Operator/hudud kodi ro'yxati — o'zgaruvchan biznes fakti — `parse` ichida emas:
     /// [`PhoneNumber::is_known_operator`], [`PhoneNumber::is_mobile`] yoki [`PhoneNumber::parse_strict`].
     pub struct PhoneNumber;
@@ -34,7 +35,7 @@ impl PhoneNumber {
         }
         // Ajratuvchilar faqat kerak bo'lganda tozalanadi (tez yo'l: toza 12 raqam).
         if !s.bytes().all(|b| b.is_ascii_digit()) {
-            s.retain(|c| !(c.is_ascii_whitespace() || matches!(c, '-' | '(' | ')')));
+            s.retain(|c| !(c.is_ascii_whitespace() || matches!(c, '-' | '(' | ')' | '.')));
         }
     }
 
@@ -129,6 +130,8 @@ mod tests {
             "+998901234567",
             "998901234567",
             " +998-90-123-45-67 ",
+            "998.90.123.45.67",
+            "+998 (90) 123.45.67",
         ] {
             assert_eq!(
                 PhoneNumber::parse(input).unwrap().as_str(),

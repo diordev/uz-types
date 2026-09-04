@@ -112,12 +112,25 @@ impl Pinfl {
     }
 
     /// PINFL ichidagi tug'ilgan sana (kalendar bo'yicha haqiqiy bo'lsa).
+    ///
+    /// **Tizim soatiga (UTC) tayanadi** — `BirthDate` kelajak sanasini rad etadi,
+    /// shuning uchun 2000-yillar PINFL'i (`5`/`6` + `YY` kelajakda) bugungi kunga
+    /// qarab `Some`/`None` bo'ladi. Testlarda [`birth_date_at`](Self::birth_date_at).
     #[cfg(feature = "date")]
     #[must_use]
     pub fn birth_date(&self) -> Option<crate::BirthDate> {
         let (y, m, d) = self.birth_date_parts()?;
         let date = chrono::NaiveDate::from_ymd_opt(y, m, d)?;
         crate::BirthDate::from_naive_date(date).ok()
+    }
+
+    /// [`birth_date`](Self::birth_date) ning deterministik varianti — "bugun" tashqaridan.
+    #[cfg(feature = "date")]
+    #[must_use]
+    pub fn birth_date_at(&self, today: chrono::NaiveDate) -> Option<crate::BirthDate> {
+        let (y, m, d) = self.birth_date_parts()?;
+        let date = chrono::NaiveDate::from_ymd_opt(y, m, d)?;
+        crate::BirthDate::from_naive_date_at(date, today).ok()
     }
 }
 
@@ -184,5 +197,25 @@ mod tests {
     fn birth_date_is_extracted() {
         let p = Pinfl::parse(OFFICIAL_2022).unwrap();
         assert_eq!(p.birth_date().unwrap().to_string(), "1993-10-12");
+    }
+
+    #[cfg(feature = "date")]
+    #[test]
+    fn birth_date_at_is_deterministic() {
+        let today = chrono::NaiveDate::from_ymd_opt(2026, 9, 3).unwrap();
+
+        // 1-raqam `1`/`2` → asr 1800. BirthDate::MIN_YEAR = 1900 bo'lganda bu
+        // har doim None qaytarardi — MIN_YEAR = 1800 aynan shu teshikni yopdi.
+        let old = Pinfl::parse("11210632040244").unwrap();
+        assert_eq!(old.century(), Some(1800));
+        assert_eq!(
+            old.birth_date_at(today).unwrap().to_string(),
+            "1863-10-12" // 12.10.63 + 1800
+        );
+
+        // 2000-yillar: `5`/`6` + kelajakdagi YY → BirthDate rad etadi (soatga bog'liq emas)
+        let future = Pinfl::parse("51210992040244").unwrap();
+        assert_eq!(future.birth_date_parts(), Some((2099, 10, 12)));
+        assert_eq!(future.birth_date_at(today), None);
     }
 }

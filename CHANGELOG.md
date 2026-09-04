@@ -12,6 +12,81 @@ _Hozircha bo'sh._
 
 ---
 
+## [0.19.0] — 2026-09-04
+
+Ikkita mavzu: **`BirthDate` ning quyi chegarasi PINFL bilan moslashtirildi** va
+**`NumId` ↔ `BIGINT` nomuvofiqligi yopildi**. Deyarli hammasi additive —
+`#[non_exhaustive]` va default type parameter tufayli mavjud kod o'zgarmaydi;
+bitta istisno pastda ⚠️ bilan berilgan.
+
+### O'zgardi
+
+- **`BirthDate::MIN_YEAR`: 1900 → 1800.** PINFL 1-raqami `1`/`2` bo'lganda asr 1800
+  (`Pinfl::century()`), shuning uchun eski chegarada `Pinfl::birth_date()` bunday
+  PINFL uchun **har doim `None`** qaytarardi. `MIN_YEAR` — sanity floor, biznes
+  qoidasi emas: yosh chegarasini `age_at()` bilan ilova qatlamida qo'ying.
+- **MSRV 1.94 → 1.85.** 1.94 ni faqat `sqlx 0.9` talab qiladi, u esa *optional*.
+  `Cargo.toml` dagi `rust-version` endi eng past umumiy qiymat; `sqlx`/`sqlx-postgres`
+  feature'lari uchun 1.94+ kerakligi hujjatlangan va CI ikkala polni alohida tekshiradi.
+  MSRV iste'molchi uchun o'lchanadi — dev-dependency'lar (`criterion` → 1.86) kirmaydi.
+- `PhoneNumber::parse()` `.` ajratuvchisini ham qabul qiladi (`998.90.123.45.67`).
+- `IdError::Number` xabari `u64`/`i64` ikkala ko'rinish uchun umumiy qilindi.
+- `NumId` ning sqlx xatolari `String` o'rniga strukturali `IdError`
+  (`BoxDynError` ichida `downcast_ref::<IdError>()` bilan ushlanadi).
+
+### Qo'shildi
+
+- **`NumId<Tag, R>`** — ichki raqam ko'rinishi endi parametr, `R: NumIdRepr`
+  (sealed: `u64` | `i64`), default `u64`. `NumId<Order>` avvalgidek ishlaydi.
+
+  | | `NumId<Tag>` (`u64`) | `NumId<Tag, i64>` |
+  | --- | --- | --- |
+  | `Encode` → `BIGINT` | `> i64::MAX` → `NumberTooLarge` | **xato yo'li yo'q** |
+  | `Decode` ← `BIGINT` | manfiy → `NumberNegative` | **xato yo'li yo'q** |
+  | Manfiy legacy ID | ❌ | ✅ |
+
+- `NumId::<Tag, u64>::MAX_DB_SAFE`, `try_new_db_safe()`, `parse_db_safe()` —
+  `BIGINT` chegarasini **query paytidan konstruksiya paytiga** ko'chiradi.
+- `NumId::to_bigint()`, `NumId::is_db_safe()` — query yuborishdan oldin tekshirish.
+- `TryFrom` ikkala yo'nalishda: `NumId<Tag, u64>` ↔ `NumId<Tag, i64>` (tekshiriladi).
+- `IdError::NumberTooLarge { value: u64 }` va `IdError::NumberNegative { value: i64 }`
+  (`match` uchun breaking emas — `IdError` `#[non_exhaustive]`; lekin ⚠️ pastga qarang).
+- `Pinfl::birth_date_at(today)` — `birth_date()` ning deterministik varianti
+  (u tizim soatiga tayanadi, chunki `BirthDate` kelajak sanasini rad etadi).
+- `prelude` ga `tag` moduli va `NumIdRepr` qo'shildi.
+- `[[example]] required-features = ["date", "id"]` — busiz
+  `cargo check --all-targets --no-default-features` kompilyatsiya bo'lmasdi.
+
+### Tuzatildi
+
+- `MIN_YEAR` o'zgarishidan keyin qolib ketgan test va README doctest
+  (`BirthDate::parse("1899-12-31")` endi `Ok`) — ikkalasi ham `main` da qizil edi.
+- README'dagi mavjud bo'lmagan narsalar: `just test-features`/`bench`/`semver`
+  recipe'lari, `tests/api.rs`, `postgres:16` CI service va `cargo semver-checks`
+  da'vosi — hech biri yo'q edi.
+- `justfile` `msrv` recipe'idagi 1.85/1.94 nomuvofiqligi.
+
+### ⚠️ Breaking
+
+- **`IdError` endi "field-less" enum emas** — unga struct-variant qo'shildi
+  (`NumberTooLarge { value }`), shuning uchun `IdError::Uuid as isize` kabi
+  raqamli cast'lar endi kompilyatsiya bo'lmaydi. `match` ga ta'sir yo'q.
+  `cargo semver-checks` (`enum_discriminants_undefined_non_unit_variant`) topgan;
+  0.x da 0.18 → 0.19 major bump bo'lgani uchun semver buzilmagan.
+
+### Migratsiya 0.18 → 0.19
+
+| 0.18 | 0.19 |
+| --- | --- |
+| `NumId<Order>` | o'zgarmaydi (`R` default `u64`) |
+| Manfiy `BIGINT` ustun → `Decode` xatosi | `NumId<Order, i64>` |
+| `> i64::MAX` ID → query paytida xato | `parse_db_safe()` / `try_new_db_safe()`, yoki `NumId<Order, i64>` |
+| sqlx xatosini matn bo'yicha tekshirish | `err.downcast_ref::<IdError>()` |
+| `IdError::Uuid as isize` | ⚠️ endi kompilyatsiya bo'lmaydi — `match` ishlating |
+| `BirthDate::parse("1850-01-01")` → `TooOld` | `Ok`; yosh chegarasi `age_at()` bilan ilovada |
+
+---
+
 ## [0.18.0] — 2026-09-03
 
 Bu relizning maqsadi — crate'ni **1.0 ga tayyorlash**: barcha breaking o'zgarishlar
@@ -309,9 +384,9 @@ Bu versiyalar uchun o'zgarishlar hujjatlashtirilmagan — git tarixiga qarang.
 
 ## Rejalashtirilgan
 
-**0.19.0** (additive, breaking emas): Postgres integration testlari CI'da (`#[sqlx::test]`),
+**0.20.0** (additive): Postgres integration testlari CI'da (`#[sqlx::test]`),
 `trybuild` compile-fail testlar (sir tiplari `Display`/`Serialize` bermasligini qulflash),
-`deny.toml`, README doctest sifatida (`#[doc = include_str!]`).
+`deny.toml` (litsenziya/manba siyosati).
 
 **1.0.0**: `cargo semver-checks` kamida bitta minor reliz davomida yashil bo'lgandan va 0.18/0.19
 real servisda ishlatilgandan keyin. Feature nomlari va public API qulflanadi.

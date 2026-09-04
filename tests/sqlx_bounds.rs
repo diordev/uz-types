@@ -30,14 +30,22 @@ fn all_types_implement_postgres_traits() {
         enum Order {}
         assert_pg_type::<Id<Order>>();
         assert_pg_type::<NumId<Order>>();
+        assert_pg_type::<NumId<Order, i64>>();
         assert_eq!(
             <Id<Order> as Type<Postgres>>::type_info(),
             <uuid::Uuid as Type<Postgres>>::type_info()
         );
+        // Ikkala repr ham bir xil ustunga (`BIGINT`) tushadi — farq faqat
+        // Encode/Decode ning xato yo'li bor-yo'qligida.
         assert_eq!(
             <NumId<Order> as Type<Postgres>>::type_info(),
             <i64 as Type<Postgres>>::type_info()
         );
+        assert_eq!(
+            <NumId<Order, i64> as Type<Postgres>>::type_info(),
+            <i64 as Type<Postgres>>::type_info()
+        );
+        assert_vec::<Vec<NumId<Order, i64>>>();
     }
 
     assert_eq!(

@@ -36,7 +36,7 @@ fn main() -> Result<(), TypeError> {
         landline.is_mobile()
     );
 
-    // Tug'ilgan sana: kelajak va 1900 dan oldingi sanalar rad etiladi
+    // Tug'ilgan sana: kelajak va 1800 dan oldingi sanalar rad etiladi
     let birth_date = BirthDate::parse("1995-08-31")?;
     println!(
         "Tug'ilgan sana: {birth_date} | yosh: {} | DD.MM.YYYY: {}",

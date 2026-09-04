@@ -10,4 +10,4 @@ pub use crate::{
 pub use crate::{BirthDate, BirthDateError, DateFormat};
 
 #[cfg(feature = "id")]
-pub use crate::{Id, IdError, JobId, NumId, RequestId, SessionId};
+pub use crate::{Id, IdError, JobId, NumId, NumIdRepr, RequestId, SessionId, tag};

@@ -1,7 +1,15 @@
 #![warn(missing_docs)]
 #![deny(unsafe_code)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc = include_str!("../README.md")]
+// README kod bloklari `date` va `id` tiplarini ishlatadi (`BirthDate`,
+// `Pinfl::birth_date`, `NumId`, `IdError`). Ikkalasi ham default feature;
+// ularsiz doctest kompilyatsiya bo'lmaydi, shuning uchun README faqat shu
+// ikkisi yoqilganda doc sifatida qo'shiladi. docs.rs `all-features` bilan
+// quradi — render'ga ta'sir yo'q.
+#![cfg_attr(
+    all(feature = "date", feature = "id"),
+    doc = include_str!("../README.md")
+)]
 
 //! # `uz-types` (verification skeleton)
 //!
@@ -49,4 +57,4 @@ pub use crate::birth_date::{BirthDate, BirthDateError, DateFormat};
 
 #[cfg(feature = "id")]
 #[cfg_attr(docsrs, doc(cfg(feature = "id")))]
-pub use crate::id::{Id, IdError, JobId, NumId, RequestId, SessionId, tag};
+pub use crate::id::{Id, IdError, JobId, NumId, NumIdRepr, RequestId, SessionId, tag};

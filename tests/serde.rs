@@ -60,7 +60,15 @@ fn ids_have_one_json_shape() {
     assert_eq!(serde_json::to_string(&n).unwrap(), "42");
     assert_eq!(serde_json::from_str::<NumId<Order>>("42").unwrap(), n);
     assert!(serde_json::from_str::<NumId<Order>>("\"42\"").is_err()); // string emas
-    assert!(serde_json::from_str::<NumId<Order>>("-1").is_err());
+    assert!(serde_json::from_str::<NumId<Order>>("-1").is_err()); // u64 repr manfiyni olmaydi
+
+    // i64 repr — manfiy legacy ID'lar uchun
+    let s = NumId::<Order, i64>::new(-1);
+    assert_eq!(serde_json::to_string(&s).unwrap(), "-1");
+    assert_eq!(serde_json::from_str::<NumId<Order, i64>>("-1").unwrap(), s);
+    assert!(serde_json::from_str::<NumId<Order, i64>>("\"-1\"").is_err());
+    // u64::MAX i64 repr'ga sig'maydi — deserializatsiya darhol rad etadi
+    assert!(serde_json::from_str::<NumId<Order, i64>>("18446744073709551615").is_err());
 }
 
 #[cfg(feature = "date")]

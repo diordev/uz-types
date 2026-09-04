@@ -48,8 +48,28 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
 
+  # Cargo per-feature MSRV'ni qo'llab-quvvatlamaydi, shuning uchun ikkita job:
+  # e'lon qilingan `rust-version` (sqlx'siz) va sqlx feature'i talab qiladigan pol.
   msrv:
-    name: MSRV (1.94)
+    name: MSRV (1.85, sqlx'siz)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+
+      - uses: Swatinem/rust-cache@v2
+
+      # `--all-targets` EMAS: u dev-dependency'larni (criterion → 1.86) tortadi,
+      # downstream esa ularni yuklamaydi. `rust-version` iste'molchi uchun.
+      - name: Feature'siz
+        run: cargo check --no-default-features
+
+      - name: sqlx'siz barcha feature'lar
+        run: cargo check --features date,id,serde,zeroize,serialize-secrets
+
+  msrv-sqlx:
+    name: MSRV (1.94, sqlx bilan)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,8 +78,58 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: MSRV bilan build
+      - name: Barcha feature'lar bilan build
         run: cargo check --all-targets --all-features
+
+  # `--all-features` bitta nuqta — feature kombinatsiyalari alohida tekshiriladi.
+  # Ro'yxat Cargo.toml dan olinadi, qo'lda yozilmaydi.
+  features:
+    name: feature kombinatsiyalari
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Powerset (kompilyatsiya)
+        run: cargo hack check --feature-powerset --all-targets
+
+      - name: Har feature alohida (test + doctest)
+        run: cargo hack test --each-feature
+
+  audit:
+    name: audit (CVE + machete)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-audit
+      - uses: taiki-e/install-action@cargo-machete
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Ma'lum zaifliklar
+        run: cargo audit
+
+      - name: Ishlatilmagan dependency'lar
+        run: cargo machete --with-metadata
+
+  # Tanlangan versiya bump'i o'zgarishlarni qoplaydimi.
+  # Nima aynan breaking ekanini ko'rish: `just semver-detail`.
+  semver:
+    name: semver-checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      # Global `RUSTFLAGS: -D warnings` bu yerda o'chiriladi: semver-checks eski
+      # relizni (baseline) ham quradi va uni yangi rustc lint'lari bilan
+      # jazolash noto'g'ri — biz o'sha kodni tekshirmayapmiz.
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        env:
+          RUSTFLAGS: ""
 
   package:
     name: cargo package

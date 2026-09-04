@@ -43,6 +43,34 @@ proptest! {
         prop_assert_eq!(p.subscriber_number(), rest);
     }
 
+    // NumId: har ikkala repr uchun ham panic yo'q va Display→parse roundtrip
+    #[cfg(feature = "id")]
+    #[test]
+    fn num_id_never_panics_and_roundtrips(input in "\\PC{0,32}") {
+        enum Order {}
+        if let Ok(v) = NumId::<Order>::parse(&input) {
+            prop_assert_eq!(NumId::<Order>::parse(&v.to_string()).unwrap(), v);
+        }
+        if let Ok(v) = NumId::<Order, i64>::parse(&input) {
+            prop_assert_eq!(NumId::<Order, i64>::parse(&v.to_string()).unwrap(), v);
+        }
+    }
+
+    // parse_db_safe qabul qilgan har qanday qiymat Encode'da HECH QACHON fail bo'lmaydi
+    #[cfg(feature = "id")]
+    #[test]
+    fn db_safe_ids_always_convert_to_bigint(n in 0u64..=u64::MAX) {
+        enum Order {}
+        let id = NumId::<Order>::new(n);
+        prop_assert_eq!(id.is_db_safe(), n <= NumId::<Order>::MAX_DB_SAFE);
+        prop_assert_eq!(
+            NumId::<Order>::try_new_db_safe(n).is_ok(),
+            id.to_bigint().is_ok()
+        );
+        // i64 repr uchun xato yo'li umuman yo'q
+        prop_assert!(NumId::<Order, i64>::new(n as i64).to_bigint().is_ok());
+    }
+
     #[test]
     fn pinfl_checksum_generator_agrees(body in "[1-6][0-9]{12}") {
         // Rasmiy algoritm bilan hisoblangan nazorat raqami is_checksum_valid dan o'tishi kerak
