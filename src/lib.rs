@@ -57,4 +57,4 @@ pub use crate::birth_date::{BirthDate, BirthDateError, DateFormat};
 
 #[cfg(feature = "id")]
 #[cfg_attr(docsrs, doc(cfg(feature = "id")))]
-pub use crate::id::{Id, IdError, JobId, NumId, NumIdRepr, RequestId, SessionId, tag};
+pub use crate::id::{Id, IdError, NumId, NumIdRepr};

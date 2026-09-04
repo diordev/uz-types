@@ -4,6 +4,22 @@
 
 use uz_types::prelude::*;
 
+// ===== ID yaratish tartibi =====
+//
+// Qadam 1 — tag'lar. Butun loyiha uchun BITTA modulda turishi kerak:
+// `Id<a::Order>` va `Id<b::Order>` bir-biriga to'g'ri kelmaydigan turli tiplar.
+// `enum {}` uninhabited: instansiya yaratib bo'lmaydi, faqat compile-time belgisi.
+mod tag {
+    pub enum Job {}
+    pub enum Session {}
+    pub enum LegacyInvoice {}
+}
+
+// Qadam 2 — alias. Ko'rinish (UUID yoki BIGINT) SHU YERDA tanlanadi.
+type JobId = Id<tag::Job>; // -> Postgres UUID
+type SessionId = Id<tag::Session>; // -> Postgres UUID
+type LegacyInvoiceId = NumId<tag::LegacyInvoice, i64>; // -> Postgres BIGINT
+
 fn main() -> Result<(), TypeError> {
     // ---------- Shaxsiy ma'lumotlar ----------
 
@@ -55,17 +71,29 @@ fn main() -> Result<(), TypeError> {
     // ---------- ID tiplari ----------
     println!();
 
-    // v4 — tasodifiy; v7 — vaqt bo'yicha tartiblangan (DB indeksi uchun afzal)
-    println!("JobId (v4):      {}", JobId::new_v4());
-    println!("SessionId (v7):  {}", SessionId::now_v7());
-    println!("RequestId (v7):  {}", RequestId::now_v7());
+    // Qadam 3 — ishlatish.
+    // v7: vaqt bo'yicha tartiblangan — DB primary key uchun afzal (index locality).
+    // v4: tasodifiy — yaratilish vaqtini oshkor qilmaydi.
+    println!("JobId (v7):        {}", JobId::now_v7());
+    println!("SessionId (v4):    {}", SessionId::new_v4());
 
-    // Mavjud qiymatni parse qilish — UUID yoki u64
+    // Mavjud qiymatni parse qilish
     let uuid_id = JobId::parse("9b7e597e-893e-4e11-92cf-f4e7d4f923b1")?;
     println!(
-        "JobId (UUID):    {uuid_id} -> versiya: {:?}",
+        "JobId (UUID):      {uuid_id} -> versiya: {:?}",
         uuid_id.version()
     );
+
+    // Eski tizimdagi BIGINT ID — manfiy qiymat ham qabul qilinadi
+    let invoice = LegacyInvoiceId::parse("-42")?;
+    println!(
+        "LegacyInvoiceId:   {invoice} -> BIGINT: {:?}",
+        invoice.to_bigint()
+    );
+
+    // Tip xavfsizligi: quyidagi qator kompilyatsiya BO'LMAYDI —
+    //     let s: SessionId = JobId::now_v7();
+    // chunki Id<tag::Job> va Id<tag::Session> turli tiplar. Aynan shu foyda uchun tag bor.
 
     // ---------- Tokenlar ----------
     println!();

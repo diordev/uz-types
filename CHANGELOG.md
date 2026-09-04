@@ -12,6 +12,53 @@ _Hozircha bo'sh._
 
 ---
 
+## [0.20.0] — 2026-09-04
+
+Bitta mavzu: **crate endi domen nomlarini bermaydi**. `JobId`, `SessionId`,
+`RequestId` alias'lari va `tag::{Job, Session, Request}` moduli o'chirildi.
+
+Ular 0.17 → 0.18 migratsiya shim'i sifatida qo'shilgan edi (kod izohining o'zida
+shunday yozilgan) va endi zarar keltirardi:
+
+- **Prelude nom to'qnashuvi** — `use uz_types::prelude::*` har bir servisga
+  `SessionId`, `RequestId`, `JobId` nomlarini tiqardi. Bular aynan servis o'zi
+  e'lon qilishni xohlaydigan nomlar.
+- **Ko'rinish domen nomiga yopishtirilgan edi** — `SessionId` majburan UUID.
+  Raqamli session ID xohlagan foydalanuvchi uchun nom band edi.
+- **Crate o'z falsafasiga zid edi** — hujjatlar "o'z tag'ingizni o'zingiz e'lon
+  qilasiz" deb turib, uchta tayyor tag berardi.
+
+Endi crate faqat **mexanizm** beradi: `Id<Tag>` (UUID) va `NumId<Tag, R>` (BIGINT).
+Nomni ham, ko'rinishni ham siz tanlaysiz.
+
+### ⚠️ Breaking
+
+- `uz_types::{JobId, SessionId, RequestId}` — **o'chirildi**.
+- `uz_types::tag` moduli (`Job`, `Session`, `Request`) — **o'chirildi**.
+- `prelude` dan ham chiqarildi.
+
+### Hujjatlashtirildi
+
+- README: `Id`/`NumId` bo'limi qayta yozildi — **yaratish tartibi 3 qadamda**
+  (tag → alias → ishlatish), `compile_fail` doctest bilan tip xavfsizligi demosi,
+  va nima uchun crate tayyor nom bermasligi tushuntirildi.
+- `examples/types_example.rs` shu 3 qadamning ishga tushadigan ko'rinishiga aylandi.
+- `uuid` re-export qilinmagani README'da aniq yozildi.
+
+### Migratsiya 0.19 → 0.20
+
+| 0.19 | 0.20 |
+| --- | --- |
+| `use uz_types::JobId;` | `pub enum Job {}` + `pub type JobId = Id<Job>;` |
+| `uz_types::tag::Session` | `pub enum Session {}` — o'z loyihangizda |
+| `use uz_types::prelude::*` → `SessionId` | endi berilmaydi; o'zingiz e'lon qilasiz |
+| `SessionId` majburan UUID edi | endi tanlov sizniki: `Id<Session>` yoki `NumId<Session, i64>` |
+
+Tag'larni butun loyiha uchun **bitta** modulda saqlang — `Id<a::Order>` va
+`Id<b::Order>` bir-biriga to'g'ri kelmaydigan turli tiplar.
+
+---
+
 ## [0.19.0] — 2026-09-04
 
 Ikkita mavzu: **`BirthDate` ning quyi chegarasi PINFL bilan moslashtirildi** va
@@ -384,8 +431,9 @@ Bu versiyalar uchun o'zgarishlar hujjatlashtirilmagan — git tarixiga qarang.
 
 ## Rejalashtirilgan
 
-**0.20.0** (additive): Postgres integration testlari CI'da (`#[sqlx::test]`),
-`trybuild` compile-fail testlar (sir tiplari `Display`/`Serialize` bermasligini qulflash),
+**1.0 gacha**: Postgres integration testlari CI'da (`#[sqlx::test]`) — hozircha
+sqlx impl'lari faqat compile-time tekshiriladi, jonli DB'da sinalmagan;
+`trybuild` compile-fail testlar (sir tiplari `Display`/`Serialize` bermasligini qulflash);
 `deny.toml` (litsenziya/manba siyosati).
 
 **1.0.0**: `cargo semver-checks` kamida bitta minor reliz davomida yashil bo'lgandan va 0.18/0.19

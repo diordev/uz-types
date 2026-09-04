@@ -1,11 +1,19 @@
 //! Tipli identifikatorlar: [`Id<Tag>`] (UUID) va [`NumId<Tag, R>`] (`u64` yoki `i64`).
 //!
-//! `Tag` — faqat compile-time belgisi (marker). Foydalanuvchi o'z tag'ini o'zi e'lon qiladi:
+//! Crate tayyor ID **nomlarini bermaydi**: `OrderId`, `SessionId` — bu sizning
+//! domeningiz. Crate faqat mexanizmni beradi, nomni va ko'rinishni siz tanlaysiz:
 //!
 //! ```ignore
-//! pub enum Order {}
-//! pub type OrderId = uz_types::Id<Order>;
+//! pub mod tag {
+//!     pub enum Order {}
+//!     pub enum LegacyInvoice {}
+//! }
+//!
+//! pub type OrderId = uz_types::Id<tag::Order>;                    // UUID
+//! pub type LegacyInvoiceId = uz_types::NumId<tag::LegacyInvoice, i64>; // BIGINT
 //! ```
+//!
+//! `Tag` — faqat compile-time belgisi (marker), hech qachon instansiyalanmaydi.
 //!
 //! `PhantomData<fn() -> Tag>` — `Id<Tag>` har doim `Send + Sync + Unpin` bo'lishi
 //! va `Tag` bo'yicha kovariant qolishi uchun (`PhantomData<Tag>` emas).
@@ -45,26 +53,6 @@ pub enum IdError {
         value: i64,
     },
 }
-
-/// Standart tag'lar (0.17 dagi `JobId`, `SessionId`, `RequestId`, `Reuid` uchun).
-pub mod tag {
-    /// `JobId` tag.
-    #[derive(Debug)]
-    pub enum Job {}
-    /// `SessionId` tag.
-    #[derive(Debug)]
-    pub enum Session {}
-    /// `RequestId` tag.
-    #[derive(Debug)]
-    pub enum Request {}
-}
-
-/// Ish (job) identifikatori.
-pub type JobId = Id<tag::Job>;
-/// Sessiya identifikatori.
-pub type SessionId = Id<tag::Session>;
-/// So'rov (request) identifikatori.
-pub type RequestId = Id<tag::Request>;
 
 // ==========================================
 // Id<Tag> — UUID

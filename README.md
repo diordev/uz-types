@@ -68,20 +68,20 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 
 ```toml
 [dependencies]
-uz-types = "0.19"
+uz-types = "0.20"
 ```
 
 Yoki kerakli feature'lar bilan:
 
 ```toml
 [dependencies]
-uz-types = { version = "0.19", features = ["serde", "sqlx-postgres"] }
+uz-types = { version = "0.20", features = ["serde", "sqlx-postgres"] }
 ```
 
 | Feature             | Default | Nima yoqadi                                                                    | Qo'shimcha dependency |
 | ------------------- | ------- | ------------------------------------------------------------------------------ | --------------------- |
 | `date`              | ✅      | `BirthDate`, `DateFormat`, `Pinfl::birth_date()`                               | `chrono`              |
-| `id`                | ✅      | `Id<Tag>`, `NumId<Tag>`, `JobId`, `SessionId`, `RequestId`                     | `uuid`                |
+| `id`                | ✅      | `Id<Tag>` (UUID), `NumId<Tag, R>` (BIGINT) — nomlarni o'zingiz berasiz        | `uuid`                |
 | `serde`             |         | `Serialize` / `Deserialize` barcha tiplar uchun (sirlar — faqat `Deserialize`) | `serde`               |
 | `sqlx`              |         | `Type` / `Encode` / `Decode` — driver'ga bog'liq emas                          | `sqlx`                |
 | `sqlx-postgres`     |         | `sqlx` + `PgHasArrayType` (`Vec<T>`, `= ANY($1)`)                              | `sqlx/postgres`       |
@@ -91,7 +91,7 @@ uz-types = { version = "0.19", features = ["serde", "sqlx-postgres"] }
 **Qoida:** tiplar default'da bor, integratsiyalar — siz tanlaysiz. Faqat `Passport` kerak bo'lgan servis `chrono`/`uuid` ni ham xohlamasa:
 
 ```toml
-uz-types = { version = "0.19", default-features = false }
+uz-types = { version = "0.20", default-features = false }
 ```
 
 ---
@@ -100,6 +100,12 @@ uz-types = { version = "0.19", default-features = false }
 
 ```rust
 use uz_types::prelude::*;
+
+// ID nomlari sizniki: tag e'lon qiling, so'ng alias bering (pastda batafsil)
+pub mod tag {
+    pub enum Job {}
+}
+pub type JobId = Id<tag::Job>;
 
 fn main() -> Result<(), TypeError> {
     // Pasport — trim, ichki bo'sh joy va katta harf avtomatik
@@ -297,39 +303,74 @@ assert_eq!(BirthDate::parse("1799-12-31"), Err(BirthDateError::TooOld));
 
 ### Id\<Tag\> va NumId\<Tag\> (feature `id`)
 
-Tipli identifikatorlar. `Tag` — faqat compile-time belgisi: `Id<Job>` ni `Id<Session>` o'rniga berib bo'lmaydi.
+Crate tayyor ID **nomlarini bermaydi**. `OrderId`, `SessionId`, `UserId` — bular sizning domeningiz, crate'niki emas: nomni ham, ko'rinishni ham siz tanlaysiz. Crate faqat ikkita mexanizm beradi:
+
+| Mexanizm        | Postgres ustuni | Qachon                                          |
+| --------------- | --------------- | ----------------------------------------------- |
+| `Id<Tag>`       | `UUID`          | yangi jadvallar — sxemani o'zingiz boshqarasiz  |
+| `NumId<Tag, R>` | `BIGINT`        | mavjud `BIGINT` ustunlar, eski tizim ID'lari    |
+
+#### Yaratish tartibi — 3 qadam
 
 ```rust
-use uz_types::{Id, NumId, IdError, JobId};
+use uz_types::{Id, IdError, NumId};
 
-// O'z tag'ingizni o'zingiz e'lon qilasiz — crate'ga PR kerak emas
-pub enum Order {}
-pub type OrderId = Id<Order>;
-pub type LegacyOrderId = NumId<Order>;        // u64 (default)
-pub type SignedOrderId = NumId<Order, i64>;   // i64 — BIGINT bilan 1:1
+// Qadam 1 — TAG'LAR. Butun loyiha uchun bitta modulda.
+pub mod tag {
+    pub enum Order {}
+    pub enum Session {}
+    pub enum LegacyInvoice {}
+}
 
-let a = OrderId::now_v7();               // vaqt bo'yicha tartiblangan — DB primary key uchun
-let b = OrderId::new_v4();               // tasodifiy
+// Qadam 2 — ALIAS. Ko'rinish (UUID yoki BIGINT) aynan shu yerda tanlanadi.
+pub type OrderId = Id<tag::Order>;                          // UUID
+pub type SessionId = Id<tag::Session>;                      // UUID
+pub type LegacyInvoiceId = NumId<tag::LegacyInvoice, i64>;  // BIGINT
+
+// Qadam 3 — ISHLATISH.
+let a = OrderId::now_v7();      // v7 — vaqt bo'yicha tartiblangan, DB primary key uchun
+let b = OrderId::new_v4();      // v4 — tasodifiy, yaratilish vaqtini oshkor qilmaydi
 assert_ne!(a, b);
 assert_eq!(OrderId::parse(&a.to_string()).unwrap(), a);
 assert_eq!(a.version(), Some(uuid::Version::SortRand));
 
-let legacy = LegacyOrderId::parse("42").unwrap();
-assert_eq!(legacy.get(), 42);
-assert_eq!(LegacyOrderId::parse("-1"), Err(IdError::Number));
+// BIGINT ID — manfiy legacy qiymatlar ham qabul qilinadi
+let inv = LegacyInvoiceId::parse("-42").unwrap();
+assert_eq!(inv.get(), -42);
+
 assert_eq!(OrderId::parse("42"), Err(IdError::Uuid));   // raqam UUID emas
-
-// i64 repr — manfiy legacy ID'lar va BIGINT bilan to'liq moslik
-assert_eq!(SignedOrderId::parse("-1").unwrap().get(), -1);
-
-// Tayyor alias'lar: JobId, SessionId, RequestId
-let job = JobId::now_v7();
-assert!(!job.is_nil());
 ```
 
-- `Id<Tag>` — istalgan RFC 9562 UUID'ni qabul qiladi (hyphenated, simple, braced, urn). Versiya cheklovi kerak bo'lsa `version()` bilan tekshiring.
+**1-qadam haqida.** `enum {}` — uninhabited: instansiya yaratib bo'lmaydi, faqat compile-time belgisi (runtime'da hajmi nol). Tag'ni **ikki joyda e'lon qilmang** — `Id<a::Order>` va `Id<b::Order>` bir-biriga to'g'ri kelmaydigan turli tiplar.
+
+**2-qadam haqida.** Session'ni raqamli qilmoqchimisiz? Faqat shu qatorni o'zgartiring — `NumId<tag::Session, i64>`. Crate bu qarorni siz uchun qilmaydi.
+
+**Nima uchun shunday.** `SessionId`, `OrderId` — domen nomlari. Agar crate ularni o'zi e'lon qilsa, (a) `use uz_types::prelude::*` sizning nomlaringiz bilan to'qnashadi, (b) ko'rinish (UUID) sizga majburlanadi. Shuning uchun 0.20.0 dan boshlab crate faqat mexanizmni beradi.
+
+Tip xavfsizligi — asosiy foyda:
+
+```rust,compile_fail
+use uz_types::Id;
+
+pub mod tag {
+    pub enum Order {}
+    pub enum Session {}
+}
+type OrderId = Id<tag::Order>;
+type SessionId = Id<tag::Session>;
+
+fn cancel(id: OrderId) {}
+
+let s = SessionId::now_v7();
+cancel(s);   // ❌ compile error: expected Id<tag::Order>, found Id<tag::Session>
+```
+
+#### Xususiyatlari
+
+- `Id<Tag>` — istalgan RFC 9562 UUID'ni qabul qiladi (hyphenated, simple, braced, urn). Versiya cheklovi kerak bo'lsa `version()` bilan tekshiring; nil UUID (`0000…`) ham o'tadi — muhim bo'lsa `is_nil()`.
 - `Id<Tag>` JSON'da **har doim** string, `NumId<Tag, R>` — **har doim** integer. DB'da mos ravishda `UUID` va `BIGINT`.
 - Ikkala tip ham `Copy`, `Eq`, `Ord`, `Hash`, `Send + Sync` — `Tag` qanday bo'lishidan qat'i nazar.
+- `uuid` **re-export qilinmagan**: `Uuid` bilan bevosita ishlasangiz (`from_uuid`, `version`) uni o'z `Cargo.toml`ingizga qo'shing.
 
 #### `NumId` ning ichki ko'rinishi: `u64` yoki `i64`
 
@@ -443,12 +484,17 @@ Deserializatsiya **validatsiyadan o'tadi** — noto'g'ri JSON `Err` beradi, `#[d
 # #[cfg(feature = "serde")] {
 use uz_types::prelude::*;
 
+pub mod tag {
+    pub enum User {}
+}
+pub type UserId = Id<tag::User>;
+
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 struct User {
     passport: Passport,
     phone: PhoneNumber,
     birth_date: BirthDate,
-    id: JobId,
+    id: UserId,
 }
 
 let json = r#"{"passport":"aa1234567","phone":"+998 90 123 45 67","birth_date":"1990-05-15","id":"01912d68-783e-7c1f-bcf6-9a5b4c3d2e1f"}"#;
@@ -484,10 +530,10 @@ use uz_types::prelude::*;
 // query_as! da maxsus tip uchun ustun override sintaksisi: `ustun AS "ustun: Tip"`
 let row = sqlx::query_as!(
     UserRow,
-    r#"SELECT id AS "id: JobId", passport AS "passport: Passport",
+    r#"SELECT id AS "id: UserId", passport AS "passport: Passport",
               phone AS "phone: PhoneNumber", birth_date AS "birth_date: BirthDate"
        FROM users WHERE id = $1"#,
-    job_id.as_uuid()
+    user_id.as_uuid()
 )
 .fetch_one(&pool)
 .await?;
