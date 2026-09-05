@@ -1,0 +1,27 @@
+# ==========================================================
+# graphify — grafga FAQAT src/*.rs tushadi
+# ==========================================================
+# Tekshirilgan: graphify 0.9.54.
+#
+# 1. 0.9.x da .graphifyignore va .gitignore MERGE bo'ladi; .graphifyignore
+#    qoidalari oxirida baholanadi (last-match-wins), ya'ni to'qnashuvda yutadi.
+#    (0.8.x da almashtirardi — eski xatti-harakatga tayanmang.)
+#
+# 2. target/, .git/, .idea/, node_modules/, graphify-out/, .graphify/ va
+#    Cargo.lock graphify ichida qattiq kodlangan — bu yerda yozish shart emas.
+#
+# 3. Bu yerda "!" (negation) ishlatiladi. 0.8.x da bitta "!" butun katalog
+#    pruning'ini o'chirar edi; bu repo kichik, sezilarli emas.
+
+# --- 1-qadam: hammasini o'chirish ---
+/*
+
+# --- 2-qadam: faqat kutubxona manbasini qaytarish ---
+!/src/
+
+# --- Ixtiyoriy (yoqish uchun qatordagi "# " ni olib tashlang) ---
+# Feature -> dependency bog'lanishlari kerak bo'lsa:
+# !/Cargo.toml
+# Public API qanday ishlatilishi (test/example -> src edge'lari) kerak bo'lsa:
+# !/tests/
+# !/examples/

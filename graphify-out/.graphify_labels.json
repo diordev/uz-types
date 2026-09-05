@@ -1,0 +1,13 @@
+{
+  "0": "NumId<Tag, R>",
+  "1": "BirthDate",
+  "2": "Self",
+  "3": "TypeError",
+  "4": "Tag",
+  "5": "Pinfl",
+  "6": "EmailAddress",
+  "7": ".cmp",
+  "8": "deserialize_string_newtype",
+  "9": "prelude.rs",
+  "10": "sqlx_support.rs"
+}
