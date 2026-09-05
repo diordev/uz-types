@@ -8,6 +8,20 @@ Hujjatlar, izohlar, commit va CHANGELOG **o'zbek tilida**; kod identifikatorlari
 > **Kod yozishdan oldin:** `.claude/skills/idiomatic-rust/SKILL.md` ni o'qing — bu repodagi
 > idiomatik Rust qoidalari (type-driven design, allocation intizomi, xato dizayni, MSRV chegaralari).
 
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+
+Rules:
+
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
 ## Buyruqlar
 
 Talab: [`just`](https://just.systems). Qo'shimcha: `cargo-hack`, `cargo-audit`, `cargo-machete`,
@@ -40,10 +54,20 @@ Justfile `RUSTFLAGS=-D warnings` eksport qiladi (CI bilan parity uchun) — `jus
 ### Barcha `String`-asosli tiplar bitta makrodan chiqadi
 
 `src/macros.rs` dagi `string_newtype!` — `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`
-uchun **yagona** boilerplate manbai: `parse`/`as_str`/`into_inner`, `TryFrom<String>`, `TryFrom<&str>`,
-`FromStr`, `Display`, `AsRef<str>`, `Borrow<str>`, `serde`, `sqlx`.
+uchun **yagona** boilerplate manbai: derive `Debug`/`Clone`/`PartialEq`/`Eq`/`Hash`/`PartialOrd`/`Ord`,
+`parse`/`as_str`/`into_inner`, `TryFrom<String>`, `TryFrom<&str>`, `FromStr`, `From<Self> for String`,
+`Display`, `AsRef<str>`, `Borrow<str>`, `serde`, `sqlx` (`sqlx_via!` orqali).
 
 Yangi string tip qo'shish = makroni chaqirish + **ikkita** funksiya yozish:
+
+```rust,ignore
+string_newtype! {
+    /// Doc-comment majburiy (`#![warn(missing_docs)]`).
+    pub struct Inn;
+    error = InnError;              // har tip o'zining aniq xatosini qaytaradi
+    expecting = "a 9-digit INN";   // serde deserializatsiya xato xabari
+}
+```
 
 - `fn normalize(s: &mut String)` — uzunlik o'zgarsa; `&mut str` — o'zgarmasa (faqat case);
 - `fn validate(s: &str) -> Result<(), Error>` — **normalizatsiya qilingandan keyingi** matn ustida.
@@ -54,10 +78,11 @@ Allocation intizomi: `TryFrom<String>` yo'li hech qachon qo'shimcha allocation q
 memmove + truncate; `normalize` in-place). Bu da'vo `benches/parse.rs` va `try_from_string_reuses_buffer`
 uslubidagi unit testlar bilan qulflangan — buzmang.
 
-`src/secret.rs` dagi `secret_newtype!` — parallel, lekin **ataylab kambag'al** makro: `Display`,
-`AsRef`, `Borrow`, `into_inner`, derive `PartialEq`/`Hash`/`Ord`, default `Serialize` **yo'q**.
-O'rniga: `expose_secret()`, `Debug` da `[REDACTED]`, `subtle` orqali constant-time `PartialEq`,
-`zeroize` feature'da `Drop`. Sir tipiga oddiy trait qo'shishdan oldin nega yo'qligini o'ylang.
+`src/secret.rs` dagi `secret_newtype!` — parallel, lekin **ataylab kambag'al** makro.
+**Yo'q:** `Display`, `AsRef`, `Borrow`, `into_inner`, derive `PartialEq`/`Hash`/`Ord`,
+default `Serialize`. **Bor:** `expose_secret()`, `Debug` da `[REDACTED]`, `subtle` orqali
+constant-time `PartialEq`, `zeroize` feature'da `Drop`. Sir tipiga oddiy trait qo'shishdan
+oldin nega yo'qligini o'ylang.
 
 ### Ikki qatlamli validatsiya — asosiy dizayn qarori
 
@@ -73,7 +98,8 @@ foydalanuvchi kiritgan ma'lumot → `parse_strict()`.
 ### `Id<Tag>` / `NumId<Tag, R>` — crate nom bermaydi
 
 Crate faqat mexanizmni beradi; `OrderId`, `SessionId` kabi nomlarni iste'molchi o'zi e'lon qiladi
-(0.20.0 da tayyor alias'lar ataylab olib tashlangan — CHANGELOG ga qarang). Bu qaror qaytarilmasin.
+(tayyor alias'lar 0.20.0-0.21.0 da ataylab olib tashlangan — CHANGELOG ga qarang). Bu qaror
+qaytarilmasin.
 
 `PhantomData<fn() -> Tag>` (`PhantomData<Tag>` emas) — `Send + Sync + Unpin` va kovariantlik uchun.
 `Tag` ga bog'liq bo'lmagan trait'lar qo'lda impl qilinadi, derive ishlatilmaydi (derive `Tag: Clone`
@@ -83,6 +109,10 @@ talab qilardi).
 berishi mumkin (`BIGINT` ga sig'maslik, DB'da manfiy qiymat) — ya'ni **query paytida**; shuning
 uchun `try_new_db_safe`/`parse_db_safe` xatoni konstruksiya paytiga ko'chiradi. `i64` da bu yo'l umuman yo'q.
 
+Konversiya sirti uchala oilada bir xil (0.21.0 dan): `Id<Tag>`, `NumId<Tag, R>` va string tiplari
+`FromStr` + `TryFrom<&str>` + `TryFrom<String>` + `From<Self> for String` beradi. Ya'ni
+`T: TryFrom<String>` bound'i ostidagi generic kod uchalasi bilan ham ishlaydi — buzmang.
+
 ### Feature'lar va integratsiyalar
 
 `date` va `id` — default. `serde`, `sqlx`, `sqlx-postgres`, `zeroize`, `serialize-secrets` — opsional.
@@ -91,9 +121,11 @@ Feature nomlari 1.0 gacha qulflangan.
 - **serde** (`src/serde_support.rs`): barcha string tiplar uchun bitta `Visitor`.
   `visit_str` → `FromStr`, `visit_string` → `TryFrom<String>` (deserializer bufferini qayta ishlatadi).
   Smart constructor chetlab o'tilmaydi — noto'g'ri JSON `Err` beradi.
-- **sqlx** (`src/sqlx_support.rs`): `sqlx_via!` makrosi. Driver'ga bog'liq emas (`DB: Database`);
-  `PgHasArrayType` faqat `sqlx-postgres` da. `Decode` **har doim validatsiyadan o'tadi**
-  (`#[sqlx(transparent)]` derive'dan farqli) — DB'dagi buzuq yozuv `try_get` da xato beradi.
+- **sqlx** (`src/sqlx_support.rs`): `sqlx_via!` makrosi — `string_newtype!` uni avtomatik chaqiradi,
+  `id.rs` va `birth_date.rs` esa qo'lda (`Id`, `NumId`, `BirthDate`).
+  Driver'ga bog'liq emas (`DB: Database`); `PgHasArrayType` faqat `sqlx-postgres` da.
+  `Decode` **har doim validatsiyadan o'tadi** (`#[sqlx(transparent)]` derive'dan farqli) —
+  DB'dagi buzuq yozuv `try_get` da xato beradi.
   Jonli DB testi yo'q; `tests/sqlx_bounds.rs` trait'lar borligini compile-time'da qulflaydi.
 
 ### README = doctest
@@ -111,8 +143,8 @@ ishlaydigan doctest. README ni tahrirlagach `cargo test --all-features --doc` is
   qo'shsangiz `TypeError` ga variant qo'shing.
 - Public konstantalar slice yoki `RangeInclusive` (`MOBILE_CODES`, `REGIONAL_CODES`) — element
   qo'shish breaking bo'lmasin.
-- Yangi public tip qo'shganda tekshiring: `prelude.rs`, `TypeError`, `tests/props.rs`,
-  `tests/sqlx_bounds.rs`.
+- Yangi public tip qo'shganda tekshiring: `lib.rs` (`mod` + `pub use` + feature gate),
+  `prelude.rs`, `TypeError`, `tests/props.rs`, `tests/sqlx_bounds.rs`.
 - Unit testlar modul ichida (`#[cfg(test)] mod tests`), integration `tests/` da. `tests/props.rs`
   ikki invariantni qulflaydi: hech qanday input panic qilmaydi, `parse` idempotent.
 
@@ -128,17 +160,3 @@ u dev-dep'larni (criterion → 1.86) tortadi, downstream esa ularni yuklamaydi.
 Versiya bump'idan oldin `just semver-detail` — aynan nima breaking ekanini ko'rsatadi.
 CHANGELOG: Keep a Changelog, breaking o'zgarishlar ⚠️ bilan va reliz oxirida **migratsiya jadvali**
 bilan. Nashr: `just publish-check` (dry-run, toza tree kerak) → `just publish`.
-
-## graphify
-
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
-
-Rules:
-
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
