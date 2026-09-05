@@ -1,0 +1,29 @@
+# Loyiha ichida ishlash; zarur bo‘lganda qo‘shimcha ruxsat so‘rash.
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[[hooks.PreToolUse]]
+matcher = "Bash"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = '''
+python3 -c '
+import json
+import pathlib
+import sys
+
+try:
+    event = json.load(sys.stdin)
+    command = event.get("tool_input", {}).get("command", "")
+    cwd = pathlib.Path(event.get("cwd") or ".")
+    searches = ("grep", "rg ", "ripgrep", "find ", "fd ", "ack ", "ag ")
+    if any(search in command for search in searches) and (cwd / "graphify-out/graph.json").is_file():
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "additionalContext": "Graphify: loyiha bilim grafigi graphify-out/ ichida. Aniq savollar uchun graphify query \"<savol>\", bog‘lanishlar uchun graphify path, tushunchalar uchun graphify explain ishlating. Keng navigatsiya uchun mavjud bo‘lsa wiki/index.md ni o‘qing. GRAPH_REPORT.md ni faqat keng arxitektura tahlilida yoki so‘rov yetarli ma’lumot bermaganda o‘qing."
+        }}, ensure_ascii=False))
+except (ValueError, TypeError, AttributeError, OSError):
+    pass
+'
+'''

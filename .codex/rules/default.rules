@@ -1,0 +1,8 @@
+# Mavjud cargo test ruxsatini Codex formatida saqlash.
+prefix_rule(
+    pattern = ["cargo", "test"],
+    decision = "allow",
+    justification = "Loyiha testlarini bajarishga ruxsat berilgan.",
+    match = ["cargo test", "cargo test --all-features"],
+    not_match = ["cargo build", "cargo publish", "cargo test-other"],
+)
