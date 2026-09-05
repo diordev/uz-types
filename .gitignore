@@ -25,6 +25,7 @@
 .project
 .settings
 .classpath
+/.air
 
 # Log file
 *.log
