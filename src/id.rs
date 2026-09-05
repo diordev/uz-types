@@ -450,6 +450,29 @@ impl<Tag, R: NumIdRepr> FromStr for NumId<Tag, R> {
     }
 }
 
+impl<Tag, R: NumIdRepr> TryFrom<&str> for NumId<Tag, R> {
+    type Error = IdError;
+    fn try_from(value: &str) -> Result<Self, IdError> {
+        Self::parse(value)
+    }
+}
+
+/// `String` bu yerda **qayta ishlatilmaydi** — raqam parse qilinadi, matn
+/// saqlanmaydi. `string_newtype!` dagi nol-allocation kafolati matn saqlaydigan
+/// tiplarga tegishli; `Id<Tag>` da ham xuddi shunday.
+impl<Tag, R: NumIdRepr> TryFrom<String> for NumId<Tag, R> {
+    type Error = IdError;
+    fn try_from(value: String) -> Result<Self, IdError> {
+        Self::parse(&value)
+    }
+}
+
+impl<Tag, R: NumIdRepr> From<NumId<Tag, R>> for String {
+    fn from(id: NumId<Tag, R>) -> Self {
+        id.to_string()
+    }
+}
+
 // `From<R> for NumId<Tag, R>` yozib bo'lmaydi: core'dagi `impl<T> From<T> for T`
 // bilan overlap deb hisoblanadi (rustc bu yerda where-clause'ga qaramaydi).
 // Shuning uchun har bir ko'rinish uchun konkret impl.
@@ -646,6 +669,41 @@ mod tests {
             LegacyOrderId::try_from(SignedOrderId::new(-1)),
             Err(IdError::NumberNegative { value: -1 })
         );
+    }
+
+    /// `NumId` konversiya sirti `Id<Tag>` va `string_newtype!` tiplari bilan bir xil:
+    /// `T: TryFrom<String>` deb yozilgan generic kod uchalasi bilan ham ishlaydi.
+    #[test]
+    fn numid_conversions_match_the_rest_of_the_crate() {
+        let expected = LegacyOrderId::parse("42").unwrap();
+        assert_eq!(LegacyOrderId::try_from("42").unwrap(), expected);
+        assert_eq!(LegacyOrderId::try_from(" 42 ").unwrap(), expected);
+        assert_eq!(
+            LegacyOrderId::try_from(String::from("42")).unwrap(),
+            expected
+        );
+        assert_eq!(String::from(expected), "42");
+        assert_eq!(String::from(expected), expected.to_string());
+
+        // `i64` ko'rinishida manfiy qiymat o'tadi.
+        let signed = SignedOrderId::try_from("-1").unwrap();
+        assert_eq!(signed.get(), -1);
+        assert_eq!(String::from(signed), "-1");
+
+        // `u64` ko'rinishida o'tmaydi — `parse` bilan bir xil xato.
+        assert_eq!(LegacyOrderId::try_from("-1"), Err(IdError::Number));
+        assert_eq!(
+            LegacyOrderId::try_from(String::from("nope")),
+            Err(IdError::Number)
+        );
+
+        // Generic kod: uchala tip ham bitta bound ostida.
+        fn ingest<T: TryFrom<String>>(raw: &str) -> Result<T, T::Error> {
+            T::try_from(raw.to_owned())
+        }
+        assert!(ingest::<LegacyOrderId>("42").is_ok());
+        assert!(ingest::<OrderId>(&OrderId::now_v7().to_string()).is_ok());
+        assert!(ingest::<SignedOrderId>("-1").is_ok());
     }
 
     #[test]

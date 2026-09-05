@@ -1,6 +1,6 @@
 [package]
 name = "uz-types"
-version = "0.20.0"
+version = "0.21.0"
 authors = ["Diyorbek Abdumutalibov <diordev@icloud.com>"]
 license = "MIT OR Apache-2.0"
 description = "Rust loyihalar uchun qayta ishlatiladigan type, value object va domain model'lar kutubxonasi."
@@ -65,7 +65,7 @@ default-features = false
 name = "parse"
 harness = false
 
-# Example `BirthDate` va `JobId` ishlatadi — busiz
+# Example `BirthDate` va `Id<Tag>` ishlatadi — busiz
 # `cargo check --all-targets --no-default-features` kompilyatsiya bo'lmaydi.
 [[example]]
 name = "types_example"

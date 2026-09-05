@@ -20,7 +20,6 @@ fn all_types_implement_postgres_traits() {
     assert_pg_type::<Pinfl>();
     assert_pg_type::<PhoneNumber>();
     assert_pg_type::<EmailAddress>();
-    assert_pg_type::<ClientId>();
 
     #[cfg(feature = "date")]
     assert_pg_type::<BirthDate>();

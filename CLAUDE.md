@@ -39,7 +39,7 @@ Justfile `RUSTFLAGS=-D warnings` eksport qiladi (CI bilan parity uchun) — `jus
 
 ### Barcha `String`-asosli tiplar bitta makrodan chiqadi
 
-`src/macros.rs` dagi `string_newtype!` — `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`, `ClientId`
+`src/macros.rs` dagi `string_newtype!` — `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`
 uchun **yagona** boilerplate manbai: `parse`/`as_str`/`into_inner`, `TryFrom<String>`, `TryFrom<&str>`,
 `FromStr`, `Display`, `AsRef<str>`, `Borrow<str>`, `serde`, `sqlx`.
 

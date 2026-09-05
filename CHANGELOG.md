@@ -12,6 +12,61 @@ _Hozircha bo'sh._
 
 ---
 
+## [0.21.0] — 2026-09-05
+
+Bitta mavzu: **0.20.0 boshlagan ish oxiriga yetkazildi**. `ClientId` — crate'da
+qolgan oxirgi domen nomi edi, u ham o'chirildi.
+
+0.20.0 da `JobId`, `SessionId`, `RequestId` aynan shu sabab olib tashlangan, lekin
+`ClientId` e'tibordan chetda qolgan. U ham xuddi o'sha muammolarni takrorlardi:
+
+- **Prelude nom to'qnashuvi** — `use uz_types::prelude::*` har bir servisga `ClientId`
+  nomini tiqardi. OAuth bilan ishlaydigan servis aynan shu nomni o'zi e'lon qilishni
+  xohlaydi.
+- **Ko'rinish domen nomiga yopishtirilgan edi** — `ClientId` majburan string. Client
+  identifikatorini UUID yoki `BIGINT` qilib saqlaydigan tizim uchun nom band edi.
+- **Tip hech narsa qo'shmasdi** — validatsiyasi bo'sh (`normalize` hech nima qilmaydi,
+  `validate` faqat "bo'sh emas + 8 KiB dan qisqa" deb tekshiradi). Bu qoida OAuth
+  spetsifikatsiyasidan emas, token tipidan meros bo'lib qolgan edi.
+
+Sirlar (`AccessToken`, `RefreshToken`, `ClientSecret`) o'z joyida — ular **mexanizm**
+beradi (yashirilgan `Debug`, constant-time `==`, `zeroize`), domen nomi emas.
+
+### Qo'shildi
+
+- `NumId<Tag, R>` uchun `TryFrom<&str>`, `TryFrom<String>` va `From<NumId<Tag, R>> for String`.
+  Endi konversiya sirti `Id<Tag>` va string tiplari bilan bir xil: `T: TryFrom<String>`
+  bound'i ostidagi generic kod uchala oilada ham ishlaydi. Ilgari `NumId` da faqat
+  `FromStr` bor edi — crate'dagi yagona istisno.
+
+### ⚠️ Breaking
+
+- `uz_types::ClientId` — **o'chirildi**.
+- `prelude` dan ham chiqarildi.
+- `secret` modulida endi `sqlx` impl'lari yo'q: `ClientId` u yerdagi yagona
+  `string_newtype!` edi, sir tiplarida esa sqlx ataylab yo'q.
+
+### Hujjatlashtirildi
+
+- README § Sir tiplari: taqqoslash jadvalidan `ClientId` ustuni olib tashlandi —
+  jadval endi faqat sir tiplarining cheklovlarini ko'rsatadi.
+- README § `Id\<Tag\> va NumId\<Tag\>`: `NumId` ning to'liq konversiya sirti yozildi.
+- `examples/types_example.rs` va `Cargo.toml` dagi eskirgan `JobId` izohi tuzatildi.
+
+### Migratsiya 0.20 → 0.21
+
+| 0.20 | 0.21 |
+| --- | --- |
+| `use uz_types::ClientId;` | o'z tipingiz: `pub struct ClientId(String);` yoki `Id<ClientTag>` |
+| `use uz_types::prelude::*` → `ClientId` | endi berilmaydi; o'zingiz e'lon qilasiz |
+| `ClientId` majburan string edi | ko'rinish sizniki: string, `Id<Tag>` yoki `NumId<Tag, i64>` |
+| `ClientId` sqlx orqali `TEXT` edi | o'z tipingizga `#[derive(sqlx::Type)]` yoki `string_newtype!` shabloni |
+
+`ClientId` validatsiyasi bo'sh edi, shuning uchun oddiy `String` ga qaytish ham yo'qotish
+emas. Qat'iy tip xohlasangiz — crate'dagi `Passport` shablonini nusxa oling.
+
+---
+
 ## [0.20.0] — 2026-09-04
 
 Bitta mavzu: **crate endi domen nomlarini bermaydi**. `JobId`, `SessionId`,
@@ -442,6 +497,9 @@ real servisda ishlatilgandan keyin. Feature nomlari va public API qulflanadi.
 **1.0 dan keyin** (yangi tiplar, crate'ga kirmaydi): `Inn`/`Stir`, `BankCard` (Luhn), `Mfo`,
 `AccountNumber`; `PhoneNumber::parse_local()` (9 raqamli mahalliy shakl).
 
-[Unreleased]: https://github.com/diordev/uz-types/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/diordev/uz-types/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/diordev/uz-types/compare/v0.20.0...v0.21.0
+[0.20.0]: https://github.com/diordev/uz-types/compare/v0.19.0...v0.20.0
+[0.19.0]: https://github.com/diordev/uz-types/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/diordev/uz-types/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/diordev/uz-types/releases/tag/v0.17.0

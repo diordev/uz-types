@@ -53,7 +53,7 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 
 |                               | Nima beradi                                                                                                                                                            |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Qat'iy tiplash**            | `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `Id<Tag>`, `NumId<Tag>`, `AccessToken`, `RefreshToken`, `ClientId`, `ClientSecret`                    |
+| **Qat'iy tiplash**            | `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `Id<Tag>`, `NumId<Tag>`, `AccessToken`, `RefreshToken`, `ClientSecret`                    |
 | **Yagona konstruktor yo'li**  | `parse()`, `FromStr`, `TryFrom`, serde `Deserialize`, sqlx `Decode` — hammasi **bitta** validatsiya yo'lidan o'tadi. Validatsiyani chetlab o'tib tip yaratib bo'lmaydi |
 | **Ikki qatlamli validatsiya** | `parse()` — hech qachon o'zgarmaydigan struktura; `parse_strict()` — o'zgaruvchan qoidalar (operator kodlari ro'yxati, PINFL checksum)                                 |
 | **Aniq xatolar**              | Har bir tipning o'z error enum'i (`PassportError`, `PinflError`, …); umumiy `TypeError` `?` orqali avtomatik yig'iladi                                                 |
@@ -68,14 +68,14 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 
 ```toml
 [dependencies]
-uz-types = "0.20"
+uz-types = "0.21"
 ```
 
 Yoki kerakli feature'lar bilan:
 
 ```toml
 [dependencies]
-uz-types = { version = "0.20", features = ["serde", "sqlx-postgres"] }
+uz-types = { version = "0.21", features = ["serde", "sqlx-postgres"] }
 ```
 
 | Feature             | Default | Nima yoqadi                                                                    | Qo'shimcha dependency |
@@ -91,7 +91,7 @@ uz-types = { version = "0.20", features = ["serde", "sqlx-postgres"] }
 **Qoida:** tiplar default'da bor, integratsiyalar — siz tanlaysiz. Faqat `Passport` kerak bo'lgan servis `chrono`/`uuid` ni ham xohlamasa:
 
 ```toml
-uz-types = { version = "0.20", default-features = false }
+uz-types = { version = "0.21", default-features = false }
 ```
 
 ---
@@ -371,6 +371,7 @@ cancel(s);   // ❌ compile error: expected Id<tag::Order>, found Id<tag::Sessio
 - `Id<Tag>` JSON'da **har doim** string, `NumId<Tag, R>` — **har doim** integer. DB'da mos ravishda `UUID` va `BIGINT`.
 - Ikkala tip ham `Copy`, `Eq`, `Ord`, `Hash`, `Send + Sync` — `Tag` qanday bo'lishidan qat'i nazar.
 - `uuid` **re-export qilinmagan**: `Uuid` bilan bevosita ishlasangiz (`from_uuid`, `version`) uni o'z `Cargo.toml`ingizga qo'shing.
+- Konversiya sirti crate'dagi boshqa tiplar bilan bir xil: `parse()`, `FromStr`, `TryFrom<&str>`, `TryFrom<String>` va `From<T> for String`. Ya'ni `fn ingest<T: TryFrom<String>>(…)` kabi generic kod `Id<Tag>`, `NumId<Tag, R>` va string tiplarining hammasi bilan ishlaydi.
 
 #### `NumId` ning ichki ko'rinishi: `u64` yoki `i64`
 
@@ -409,19 +410,19 @@ DB bilan ishlaganda `i64` ko'rinishi runtime xatolarining butun sinfini yo'q qil
 
 Sir tiplari **tasodifan** oshkor bo'lmasligi uchun tip darajasida cheklangan:
 
-|                                          | Sir tiplari                                                        | `ClientId` (sir emas) |
-| ---------------------------------------- | ------------------------------------------------------------------ | --------------------- |
-| `Display` (`{}`, `.to_string()`)         | ❌ compile error                                                   | ✅                    |
-| `Debug` (`{:?}`)                         | `AccessToken([REDACTED])`                                          | ✅ ochiq              |
-| `as_str()`, `AsRef<str>`, `into_inner()` | ❌                                                                 | ✅                    |
-| Qiymatga kirish                          | faqat `expose_secret()`                                            | `as_str()`            |
-| `==`                                     | constant-time (`subtle`)                                           | oddiy                 |
-| serde                                    | `Deserialize` ✅; `Serialize` faqat `serialize-secrets` feature'da | ikkalasi ✅           |
-| sqlx                                     | ❌ (token DB'da saqlanmasligi kerak)                               | ✅                    |
-| `zeroize` feature                        | `Drop` da xotira tozalanadi                                        | —                     |
+|                                          | Sir tiplari                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| `Display` (`{}`, `.to_string()`)         | ❌ compile error                                                   |
+| `Debug` (`{:?}`)                         | `AccessToken([REDACTED])`                                          |
+| `as_str()`, `AsRef<str>`, `into_inner()` | ❌                                                                 |
+| Qiymatga kirish                          | faqat `expose_secret()`                                            |
+| `==`                                     | constant-time (`subtle`)                                           |
+| serde                                    | `Deserialize` ✅; `Serialize` faqat `serialize-secrets` feature'da |
+| sqlx                                     | ❌ (token DB'da saqlanmasligi kerak)                               |
+| `zeroize` feature                        | `Drop` da xotira tozalanadi                                        |
 
 ```rust
-use uz_types::{AccessToken, ClientId, TokenError};
+use uz_types::{AccessToken, TokenError};
 
 let token = AccessToken::parse(" eyJhbGciOiJIUzI1NiJ9.xyz ").unwrap();
 assert_eq!(format!("{token:?}"), "AccessToken([REDACTED])");     // logga tushmaydi
@@ -429,9 +430,6 @@ assert_eq!(token.expose_secret(), "eyJhbGciOiJIUzI1NiJ9.xyz");   // yagona ochiq
 
 assert_eq!(AccessToken::parse("   "), Err(TokenError::Empty));
 assert!(AccessToken::parse(&"a".repeat(uz_types::MAX_TOKEN_LEN + 1)).is_err());
-
-let client_id = ClientId::parse("my-service").unwrap();
-assert_eq!(client_id.to_string(), "my-service");                 // ClientId — oddiy tip
 ```
 
 `MAX_TOKEN_LEN` (8 KiB) — mantiqiy chegara, xotira DoS'idan himoya emas: `String` bu tekshiruvga kelguncha allaqachon ajratilgan bo'ladi. Body-limit HTTP qatlamida turishi kerak.
@@ -472,7 +470,7 @@ Barcha error tiplari `std::error::Error`, `Copy`, `Eq` va `#[non_exhaustive]`; `
 
 | Tip                                                            | JSON                                                                   |
 | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`, `ClientId` | `"AA1234567"` (normalizatsiya qilingan string)                         |
+| `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`             | `"AA1234567"` (normalizatsiya qilingan string)                         |
 | `BirthDate`                                                    | `"1990-05-15"`                                                         |
 | `Id<Tag>`                                                      | `"9b7e597e-893e-4e11-92cf-f4e7d4f923b1"` (bincode/postcard'da 16 bayt) |
 | `NumId<Tag, R>`                                                | `42` / `-1` (faqat integer; `"42"` string qabul qilinmaydi)            |
@@ -517,7 +515,7 @@ assert!(serde_json::from_str::<PhoneNumber>("\"997901234567\"").is_err());
 
 | Tip                                                            | Postgres ustuni    |
 | -------------------------------------------------------------- | ------------------ |
-| `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`, `ClientId` | `TEXT` / `VARCHAR` |
+| `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`             | `TEXT` / `VARCHAR` |
 | `BirthDate`                                                    | `DATE`             |
 | `Id<Tag>`                                                      | `UUID`             |
 | `NumId<Tag, R>`                                                | `BIGINT`           |

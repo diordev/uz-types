@@ -47,9 +47,7 @@ pub use crate::error::TypeError;
 pub use crate::passport::{Passport, PassportError};
 pub use crate::phone_number::{PhoneNumber, PhoneNumberError};
 pub use crate::pinfl::{Gender, Pinfl, PinflError};
-pub use crate::secret::{
-    AccessToken, ClientId, ClientSecret, MAX_TOKEN_LEN, RefreshToken, TokenError,
-};
+pub use crate::secret::{AccessToken, ClientSecret, MAX_TOKEN_LEN, RefreshToken, TokenError};
 
 #[cfg(feature = "date")]
 #[cfg_attr(docsrs, doc(cfg(feature = "date")))]

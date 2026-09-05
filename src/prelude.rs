@@ -1,9 +1,9 @@
 //! Eng ko'p ishlatiladigan tiplarni bir qatorda import qilish uchun.
 
 pub use crate::{
-    AccessToken, ClientId, ClientSecret, EmailAddress, EmailAddressError, Gender, MAX_TOKEN_LEN,
-    Passport, PassportError, PhoneNumber, PhoneNumberError, Pinfl, PinflError, RefreshToken,
-    TokenError, TypeError,
+    AccessToken, ClientSecret, EmailAddress, EmailAddressError, Gender, MAX_TOKEN_LEN, Passport,
+    PassportError, PhoneNumber, PhoneNumberError, Pinfl, PinflError, RefreshToken, TokenError,
+    TypeError,
 };
 
 #[cfg(feature = "date")]

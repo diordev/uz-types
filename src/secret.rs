@@ -1,12 +1,10 @@
-//! Sir (secret) tiplari: `AccessToken`, `RefreshToken`, `ClientSecret` — va oddiy `ClientId`.
+//! Sir tiplari: `AccessToken`, `RefreshToken`, `ClientSecret`.
 //!
 //! Sir tiplarida **yo'q**: `Display`, `AsRef<str>`, `Borrow<str>`, `Deref`, `into_inner`,
 //! derive `PartialEq`, `Hash`, `Ord`, (default'da) `Serialize`.
 //! **Bor**: `expose_secret()`, yashirilgan `Debug`, constant-time `PartialEq` (`subtle`),
 //! `Deserialize` (serde), `Serialize` faqat `serialize-secrets` feature'da,
 //! `zeroize` feature'da `Drop` xotirani tozalaydi.
-
-use crate::macros::string_newtype;
 
 /// Token / sir uzunligi chegarasi (bayt). 8 KiB — JWT/Bearer uchun yetarli.
 ///
@@ -147,20 +145,6 @@ secret_newtype! {
     pub struct ClientSecret;
 }
 
-string_newtype! {
-    /// OAuth client identifikatori — **sir emas**, oddiy string tipi (`Display` bor).
-    pub struct ClientId;
-    error = TokenError;
-    expecting = "a non-empty client id";
-}
-
-impl ClientId {
-    fn normalize(_: &mut str) {}
-    fn validate(s: &str) -> Result<(), TokenError> {
-        validate_token(s)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,6 +161,5 @@ mod tests {
             AccessToken::parse(&"a".repeat(MAX_TOKEN_LEN + 1)),
             Err(TokenError::TooLong)
         );
-        assert_eq!(ClientId::parse(" id-1 ").unwrap().to_string(), "id-1");
     }
 }

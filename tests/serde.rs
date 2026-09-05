@@ -88,8 +88,4 @@ fn secrets_deserialize_but_do_not_serialize_by_default() {
 
     #[cfg(feature = "serialize-secrets")]
     assert_eq!(serde_json::to_string(&t).unwrap(), "\"tok\"");
-
-    // ClientId sir emas — har doim serializatsiya bo'ladi
-    let c = ClientId::parse("c-1").unwrap();
-    assert_eq!(serde_json::to_string(&c).unwrap(), "\"c-1\"");
 }

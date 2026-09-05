@@ -100,13 +100,11 @@ fn main() -> Result<(), TypeError> {
 
     let access_token = AccessToken::parse(" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xyz ")?;
     let refresh_token = RefreshToken::parse("rt_9f8e7d6c5b4a")?;
-    let client_id = ClientId::parse("my-service")?;
     let client_secret = ClientSecret::parse("s3cr3t-value")?;
 
     // Loglashda `{:?}` — qiymat yashiringan holda chiqadi
     println!("AccessToken:   {access_token:?}");
     println!("RefreshToken:  {refresh_token:?}");
-    println!("ClientId:      {client_id:?}");
     println!("ClientSecret:  {client_secret:?}");
 
     // Haqiqiy qiymat faqat tashqi xizmatga uzatishda olinadi
