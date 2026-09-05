@@ -1,1 +1,0 @@
-{"0": "Id<Tag> trait impl'lari", "1": "BirthDate va sana formatlari", "2": "NumIdRepr va BIGINT konversiyasi", "3": "String newtype'lar va TypeError", "4": "Id/NumId konstruksiyasi", "5": "Pinfl: checksum va sana", "6": "EmailAddress validatsiyasi", "7": "Tartiblash va UUID versiyasi", "8": "serde Visitor", "9": "prelude re-export", "10": "sqlx makro moduli"}
