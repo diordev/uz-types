@@ -28,12 +28,15 @@ Talab: [`just`](https://just.systems). Qo'shimcha: `cargo-hack`, `cargo-audit`, 
 `cargo-semver-checks`, `rustup toolchain install 1.85.0 1.94.0`.
 
 ```bash
-just check   # TEZ (~3s, tarmoqsiz): fmt-check + clippy + test + doc-check — commit'dan oldin
-just ci      # TO'LIQ (~80s): check + example + features + msrv + package + audit + semver — push'dan oldin
+just check   # TEZ (~3s warm): fmt-check + clippy + test + doc-check — commit'dan oldin
+just ci      # DB-SIZ (~80s): check + example + features + msrv + package + audit + semver — push'dan oldin
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test
 ```
 
-`just ci` — CI job'larining aynan o'zi. Alohida: `just fmt`, `just lint`, `just test`, `just features`,
-`just msrv`, `just semver-detail`, `just bench`, `just doc`, `just tree`.
+`just ci` — PostgreSQL service talab qilmaydigan CI suite'i. Jonli DB tekshiruvi alohida
+`postgres-test`; uning `DATABASE_URL`i CREATE DATABASE huquqli disposable instansga qarashi kerak.
+Alohida: `just fmt`, `just lint`, `just test`, `just features`, `just msrv`,
+`just semver-detail`, `just bench`, `just doc`, `just tree`.
 
 Bitta test:
 
@@ -62,8 +65,9 @@ Quyida faqat qaytarilmaydigan qarorlar — buzilmasligi kerak bo'lgan invariantl
 - **Tartib qat'iy: `trim_in_place` → `normalize` → `validate`.** Trim'ni makro bajaradi.
 - **`TryFrom<String>` yo'li qo'shimcha allocation qilmaydi** — `benches/parse.rs` va
   `try_from_string_reuses_buffer` uslubidagi unit testlar bilan qulflangan.
-- **O'zgaruvchan faktni `parse()` ichiga ko'chirmang** (`MOBILE_CODES`, checksum, jins/asr): DB va
-  Kafka'dagi eski yozuvlar o'qilmay qoladi. DB/event → `parse()`, foydalanuvchi → `parse_strict()`.
+- **Base parse'ga registry yoki qo'shimcha strict semantikani ko'chirmang**: DB/Kafka/Serde replay
+  → `parse()`, joriy foydalanuvchi inputi → `parse_strict()`. PINFL strict tekshiruvi `date`
+  feature'idan mustaqil ravishda checksum, jins/asr va to'liq Gregorian sanani qamraydi.
 - **Crate ID uchun domen nomi bermaydi** — `OrderId`, `SessionId` iste'molchida. Tayyor alias'lar
   0.20.0–0.21.0 da ataylab olib tashlangan (CHANGELOG); bu qaror qaytarilmasin.
 - **`NumIdRepr` sealed** — faqat `u64` va `i64`. `PhantomData<fn() -> Tag>`, `PhantomData<Tag>` emas.
@@ -82,7 +86,8 @@ Quyida faqat qaytarilmaydigan qarorlar — buzilmasligi kerak bo'lgan invariantl
 - Barcha public enum'lar `#[non_exhaustive]`. Har `parse()` **o'zining aniq** xatosini qaytaradi
   (`PassportError`, ...); `TypeError` — `#[from]` orqali yig'iladigan aggregate. Yangi xato tipi
   qo'shsangiz `TypeError` ga variant qo'shing.
-- Public konstantalar slice yoki `RangeInclusive` (`MOBILE_CODES`, `REGIONAL_CODES`) — element
+- Telefonning exact public registrlari slice (`MOBILE_CODES`, `GEOGRAPHIC_CODES`, `SIP_CODES`,
+  `NON_GEOGRAPHIC_FIXED_CODES`); `REGIONAL_CODES` deprecated compatibility oralig'i. Element
   qo'shish breaking bo'lmasin.
 - Yangi public tip qo'shganda tekshiring: `lib.rs` (`mod` + `pub use` + feature gate),
   `prelude.rs`, `TypeError`, `tests/props.rs`, `tests/sqlx_bounds.rs`. To'liq ro'yxat:
@@ -94,8 +99,8 @@ Quyida faqat qaytarilmaydigan qarorlar — buzilmasligi kerak bo'lgan invariantl
 
 `rust-version = "1.85"` (edition 2024) — bu iste'molchi uchun. `sqlx` feature'i **1.94+** talab qiladi
 (sqlx 0.9), lekin cargo per-feature MSRV'ni bilmaydi, shuning uchun manifestda eng past umumiy qiymat
-turadi va CI ikkala polni alohida job'da tekshiradi. MSRV tekshiruvi `--all-targets` **ishlatmaydi**:
-u dev-dep'larni (criterion → 1.86) tortadi, downstream esa ularni yuklamaydi.
+turadi va CI ikkala polni alohida job'da tekshiradi. 1.85 MSRV `cargo check` bilan, `--all-targets`siz
+o'lchanadi: dev-dep'lar (criterion → 1.86, jonli SQLx test vositalari → 1.94) downstreamga kirmaydi.
 
 ### Reliz
 

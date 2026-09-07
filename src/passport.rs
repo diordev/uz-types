@@ -27,12 +27,12 @@ impl Passport {
     }
 
     fn validate(s: &str) -> Result<(), PassportError> {
-        if s.len() != Self::LEN {
-            return Err(PassportError::Length);
-        }
         // `is_ascii` split_at dan OLDIN: ko'p baytli belgi chegarasida panic bo'lmasligi uchun.
         if !s.is_ascii() {
             return Err(PassportError::Format);
+        }
+        if s.len() != Self::LEN {
+            return Err(PassportError::Length);
         }
         let (series, number) = s.split_at(Self::SERIES_LEN);
         if !series.bytes().all(|b| b.is_ascii_uppercase())
@@ -95,11 +95,13 @@ mod tests {
     #[test]
     fn errors_are_precise() {
         assert_eq!(Passport::parse("AA123"), Err(PassportError::Length));
+        assert_eq!(Passport::parse("AA12345678"), Err(PassportError::Length));
         assert_eq!(Passport::parse("A11234567"), Err(PassportError::Format));
         assert_eq!(
             Passport::parse("a\u{00C4}234567"),
             Err(PassportError::Format)
         );
+        assert_eq!(Passport::parse("АА1234567"), Err(PassportError::Format));
     }
 
     #[test]

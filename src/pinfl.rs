@@ -1,4 +1,4 @@
-use crate::macros::string_newtype;
+use crate::{calendar::is_valid_gregorian_date, macros::string_newtype};
 
 string_newtype! {
     /// JShShIR / PINFL — 14 raqamli shaxsiy identifikatsiya raqami.
@@ -26,11 +26,16 @@ impl Pinfl {
     pub const LEN: usize = 14;
 
     /// Nazorat raqami vaznlari (VM qarori №177, 12.04.2022: "7 3 1" takrorlanadi, modul 10).
+    ///
+    /// Rasmiy manba: <https://lex.uz/uz/docs/-5955665>.
     const WEIGHTS: [u32; 3] = [7, 3, 1];
 
     fn normalize(_: &mut str) {}
 
     fn validate(s: &str) -> Result<(), PinflError> {
+        if !s.is_ascii() {
+            return Err(PinflError::Format);
+        }
         if s.len() != Self::LEN {
             return Err(PinflError::Length);
         }
@@ -40,7 +45,10 @@ impl Pinfl {
         Ok(())
     }
 
-    /// Struktura + nazorat raqami + jins/asr belgisi + tug'ilgan sana — hammasi tekshiriladi.
+    /// Struktura + nazorat raqami + jins/asr belgisi + to'liq Gregorian sana.
+    ///
+    /// Sana tekshiruvi `date` feature'idan mustaqil: `31.02` yoki `29.02.1900`
+    /// checksum'i to'g'ri bo'lsa ham [`PinflError::Structure`] qaytaradi.
     pub fn parse_strict(value: &str) -> Result<Self, PinflError> {
         let pinfl = Self::parse(value)?;
         if !pinfl.is_checksum_valid() {
@@ -87,15 +95,16 @@ impl Pinfl {
         }
     }
 
-    /// 2–7 raqamlar `DDMMYY` + asr → `(yil, oy, kun)`. Oddiy diapazon tekshiruvi
-    /// (kun 1..=31, oy 1..=12); kalendar to'g'riligini `birth_date()` tekshiradi.
+    /// 2–7 raqamlar `DDMMYY` + asr → `(yil, oy, kun)`.
+    ///
+    /// Faqat to'liq Gregorian sana haqiqiy bo'lsa qiymat qaytaradi.
     #[must_use]
     pub fn birth_date_parts(&self) -> Option<(i32, u32, u32)> {
         let century = self.century()?;
         let day = self.digit(1) * 10 + self.digit(2);
         let month = self.digit(3) * 10 + self.digit(4);
         let year = century + i32::try_from(self.digit(5) * 10 + self.digit(6)).ok()?;
-        ((1..=31).contains(&day) && (1..=12).contains(&month)).then_some((year, month, day))
+        is_valid_gregorian_date(year, month, day).then_some((year, month, day))
     }
 
     /// 8–10 raqamlar: tug'ilgan hudud kodi.
@@ -160,6 +169,7 @@ mod tests {
     // Rasmiy hujjatlardagi misollar: VM qarori №200 (1996) va №177 (2022).
     const OFFICIAL_1996: &str = "31210632040244";
     const OFFICIAL_2022: &str = "31210932040247";
+    const OFFICIAL_2022_FEMALE: &str = "40201902050010";
 
     #[test]
     fn official_examples_pass_strict() {
@@ -167,6 +177,7 @@ mod tests {
             let p = Pinfl::parse_strict(s).unwrap();
             assert!(p.is_checksum_valid());
             assert_eq!(p.gender(), Some(Gender::Male));
+            assert_eq!(p.century(), Some(1900));
             assert_eq!(p.region_code(), "204");
             assert_eq!(p.serial(), "024");
         }
@@ -177,6 +188,43 @@ mod tests {
         assert_eq!(
             Pinfl::parse(OFFICIAL_2022).unwrap().birth_date_parts(),
             Some((1993, 10, 12))
+        );
+
+        let female = Pinfl::parse_strict(OFFICIAL_2022_FEMALE).unwrap();
+        assert!(female.is_checksum_valid());
+        assert_eq!(female.gender(), Some(Gender::Female));
+        assert_eq!(female.century(), Some(1900));
+        assert_eq!(female.birth_date_parts(), Some((1990, 1, 2)));
+        assert_eq!(female.region_code(), "205");
+        assert_eq!(female.serial(), "001");
+    }
+
+    fn with_checksum(body: &str) -> String {
+        assert_eq!(body.len(), Pinfl::LEN - 1);
+        assert!(body.bytes().all(|byte| byte.is_ascii_digit()));
+
+        let sum: u32 = body
+            .bytes()
+            .enumerate()
+            .map(|(index, byte)| u32::from(byte - b'0') * Pinfl::WEIGHTS[index % 3])
+            .sum();
+        format!("{body}{}", sum % 10)
+    }
+
+    #[test]
+    fn strict_parse_requires_a_valid_gregorian_date() {
+        for body in ["3310290204024", "3310490204024", "3290200204024"] {
+            let value = with_checksum(body);
+            assert!(Pinfl::parse(&value).is_ok());
+            assert_eq!(Pinfl::parse_strict(&value), Err(PinflError::Structure));
+        }
+
+        let leap_day = with_checksum("5290200204024");
+        assert!(Pinfl::parse(&leap_day).is_ok());
+        assert!(Pinfl::parse_strict(&leap_day).is_ok());
+        assert_eq!(
+            Pinfl::parse(&leap_day).unwrap().birth_date_parts(),
+            Some((2000, 2, 29))
         );
     }
 
@@ -190,7 +238,9 @@ mod tests {
             Err(PinflError::Checksum)
         );
         assert_eq!(Pinfl::parse("1234567890123"), Err(PinflError::Length));
+        assert_eq!(Pinfl::parse("123456789012345"), Err(PinflError::Length));
         assert_eq!(Pinfl::parse("1234567890123a"), Err(PinflError::Format));
+        assert_eq!(Pinfl::parse("З1210632040247"), Err(PinflError::Format));
     }
 
     #[cfg(feature = "date")]

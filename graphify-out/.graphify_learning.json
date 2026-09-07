@@ -1,5 +1,86 @@
 {
-  "generated_at": "2026-09-06T07:32:35.923776+00:00",
-  "nodes": {},
+  "generated_at": "2026-09-07T12:38:42.524104+00:00",
+  "nodes": {
+    "src_email_emailaddress": {
+      "code_fingerprint": "7e826348f112fbe86bc746892573ae9dc3e18e2eed0b96884d6aacee03e462de",
+      "label": "EmailAddress",
+      "last": "2026-09-06T07:33:00.719866+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-06T07:33:00.719866+00:00",
+          "outcome": "useful",
+          "q": "Explain the architecture of this project"
+        }
+      ],
+      "score": 0.972378806,
+      "source_file": "src/email.rs",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_error_typeerror": {
+      "code_fingerprint": "f1af7fcf3a651a8695088f4a86d69052fc4ad56d631ce8d0c3f51c1a33ab9b33",
+      "label": "TypeError",
+      "last": "2026-09-06T07:33:00.719866+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-06T07:33:00.719866+00:00",
+          "outcome": "useful",
+          "q": "Explain the architecture of this project"
+        }
+      ],
+      "score": 0.972378806,
+      "source_file": "src/error.rs",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_id": {
+      "code_fingerprint": "59aa51705a4643d2b6b2858393f75b0cd917afdcfc214d77201694f244e04301",
+      "label": "id.rs",
+      "last": "2026-09-06T07:33:00.719866+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-06T07:33:00.719866+00:00",
+          "outcome": "useful",
+          "q": "Explain the architecture of this project"
+        }
+      ],
+      "score": 0.972378806,
+      "source_file": "src/id.rs",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_lib": {
+      "code_fingerprint": "a46b965fd970a1bbcbb3a4eb11b5a539e16bb97582f1ff9ffd9fdad72309caa5",
+      "label": "lib.rs",
+      "last": "2026-09-06T07:33:00.719866+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-06T07:33:00.719866+00:00",
+          "outcome": "useful",
+          "q": "Explain the architecture of this project"
+        }
+      ],
+      "score": 0.972378806,
+      "source_file": "src/lib.rs",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_secret": {
+      "code_fingerprint": "a911fab474758031f1775b29ab7dda13c88e0a7e3b9393729e06808358b944df",
+      "label": "secret.rs",
+      "last": "2026-09-06T07:33:00.719866+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-06T07:33:00.719866+00:00",
+          "outcome": "useful",
+          "q": "Explain the architecture of this project"
+        }
+      ],
+      "score": 0.972378806,
+      "source_file": "src/secret.rs",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
   "version": 1
 }

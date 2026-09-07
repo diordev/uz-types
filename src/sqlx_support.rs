@@ -65,6 +65,10 @@ macro_rules! sqlx_via {
             fn array_type_info() -> ::sqlx::postgres::PgTypeInfo {
                 <$Inner as ::sqlx::postgres::PgHasArrayType>::array_type_info()
             }
+
+            fn array_compatible(ty: &::sqlx::postgres::PgTypeInfo) -> bool {
+                <$Inner as ::sqlx::postgres::PgHasArrayType>::array_compatible(ty)
+            }
         }
     };
 }

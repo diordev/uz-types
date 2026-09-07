@@ -21,12 +21,48 @@ impl PhoneNumber {
     /// Operator/hudud kodi uzunligi.
     pub const OPERATOR_CODE_LEN: usize = 2;
 
-    /// Ma'lum mobil operator kodlari. **Slice** — yangi kod qo'shish breaking emas.
+    /// Ma'lum mobil kodlar. **Slice** — yangi kod qo'shish breaking emas.
+    ///
+    /// Boshlang'ich reja: ITU'ning 2023-02-10 dagi
+    /// [E.164 yangilanishi](https://www.itu.int/dms_pub/itu-t/opb/sp/T-SP-OB.1263-2023-OAS-PDF-E.pdf).
+    /// Keyingi manbalar: [20](https://beeline.uz/uz/phone-codes) (2026-09-07 da
+    /// tekshirildi), [70](https://uztelecom.uz/uz/yangiliklar/yangiliklar/uztelecom-yangi-operator-kodi-plus998-70-ni-taqdim-etadi/)
+    /// (2025-03-19), [80](https://perfectum.uz/uz/cdma) (2026-09-07 da tekshirildi),
+    /// [87](https://company.mobi.uz/uz/press/2026/101857/) (2026-04-16) va
+    /// [92](https://beeline.uz/uz/events/news/novyy-kod-beeline-uzbekistan_92)
+    /// (7-noyabr; 2026-09-07 da tekshirildi).
+    ///
+    /// `70` kodi mobil va geografik xizmatlarda ishlatiladi, shuning uchun tasniflar
+    /// o'zaro istisno emas. Registry vaqt o'tishi bilan eskirishi mumkin;
+    /// [`parse`](Self::parse) undan foydalanmaydi.
     pub const MOBILE_CODES: &[&str] = &[
-        "20", "33", "50", "55", "77", "88", "90", "91", "93", "94", "95", "97", "98", "99",
+        "20", "33", "50", "70", "77", "80", "87", "88", "90", "91", "92", "93", "94", "95", "97",
+        "98", "99",
     ];
 
-    /// Shahar/hudud (statsionar) kodlari oralig'i.
+    /// Geografik PSTN kodlari.
+    ///
+    /// Manba: ITU'ning 2023-02-10 dagi
+    /// [O'zbekiston E.164 rejasi](https://www.itu.int/dms_pub/itu-t/opb/sp/T-SP-OB.1263-2023-OAS-PDF-E.pdf).
+    /// `70` keyinchalik mobil xizmatga ham ajratilgan; shu sabab u ikki to'plamda bor.
+    pub const GEOGRAPHIC_CODES: &[&str] = &[
+        "61", "62", "65", "66", "67", "69", "70", "71", "72", "73", "74", "75", "76", "79",
+    ];
+
+    /// SIP xizmat kodi.
+    ///
+    /// Manba: ITU'ning 2023-02-10 dagi
+    /// [O'zbekiston E.164 rejasi](https://www.itu.int/dms_pub/itu-t/opb/sp/T-SP-OB.1263-2023-OAS-PDF-E.pdf).
+    pub const SIP_CODES: &[&str] = &["55"];
+
+    /// Geografik bo'lmagan statsionar tarmoq xizmat kodi.
+    ///
+    /// Manba: ITU'ning 2023-02-10 dagi
+    /// [O'zbekiston E.164 rejasi](https://www.itu.int/dms_pub/itu-t/opb/sp/T-SP-OB.1263-2023-OAS-PDF-E.pdf).
+    pub const NON_GEOGRAPHIC_FIXED_CODES: &[&str] = &["78"];
+
+    /// Eski shahar/hudud oralig'i; aniq tasnif uchun ishlatilmaydi.
+    #[deprecated(note = "aniq hudud kodlari uchun PhoneNumber::GEOGRAPHIC_CODES dan foydalaning")]
     pub const REGIONAL_CODES: core::ops::RangeInclusive<u8> = 60..=79;
 
     fn normalize(s: &mut String) {
@@ -52,7 +88,7 @@ impl PhoneNumber {
         Ok(())
     }
 
-    /// Struktura + operator/hudud kodi ro'yxatda bo'lishi shart.
+    /// Struktura + mobil/geografik/SIP/statsionar kod exact ro'yxatda bo'lishi shart.
     pub fn parse_strict(value: &str) -> Result<Self, PhoneNumberError> {
         let phone = Self::parse(value)?;
         if !phone.is_known_operator() {
@@ -83,14 +119,31 @@ impl PhoneNumber {
         Self::MOBILE_CODES.contains(&self.operator_code())
     }
 
-    /// Kod mobil ro'yxatda yoki hudud oralig'ida bormi (registry-qatlam tekshiruvi).
+    /// Kod crate'dagi aniq geografik PSTN ro'yxatida bormi.
+    #[inline]
+    #[must_use]
+    pub fn is_geographic(&self) -> bool {
+        Self::GEOGRAPHIC_CODES.contains(&self.operator_code())
+    }
+
+    /// Kod crate'dagi SIP ro'yxatida bormi.
+    #[inline]
+    #[must_use]
+    pub fn is_sip(&self) -> bool {
+        Self::SIP_CODES.contains(&self.operator_code())
+    }
+
+    /// Kod crate'dagi geografik bo'lmagan statsionar ro'yxatda bormi.
+    #[inline]
+    #[must_use]
+    pub fn is_non_geographic_fixed(&self) -> bool {
+        Self::NON_GEOGRAPHIC_FIXED_CODES.contains(&self.operator_code())
+    }
+
+    /// Kod crate'dagi aniq mobil, geografik, SIP yoki statsionar ro'yxatda bormi.
     #[must_use]
     pub fn is_known_operator(&self) -> bool {
-        self.is_mobile()
-            || self
-                .operator_code()
-                .parse::<u8>()
-                .is_ok_and(|n| Self::REGIONAL_CODES.contains(&n))
+        self.is_mobile() || self.is_geographic() || self.is_sip() || self.is_non_geographic_fixed()
     }
 
     /// `+998901234567` (yangi `String`).
@@ -170,5 +223,65 @@ mod tests {
             PhoneNumber::parse("998+901234567"),
             Err(PhoneNumberError::Format)
         );
+    }
+
+    fn with_code(code: &str) -> String {
+        format!("998{code}1234567")
+    }
+
+    #[test]
+    fn exact_code_sets_are_classified() {
+        assert_eq!(
+            PhoneNumber::MOBILE_CODES,
+            &[
+                "20", "33", "50", "70", "77", "80", "87", "88", "90", "91", "92", "93", "94", "95",
+                "97", "98", "99"
+            ]
+        );
+        assert_eq!(
+            PhoneNumber::GEOGRAPHIC_CODES,
+            &[
+                "61", "62", "65", "66", "67", "69", "70", "71", "72", "73", "74", "75", "76", "79"
+            ]
+        );
+        assert_eq!(PhoneNumber::SIP_CODES, &["55"]);
+        assert_eq!(PhoneNumber::NON_GEOGRAPHIC_FIXED_CODES, &["78"]);
+
+        let overlap = PhoneNumber::parse(&with_code("70")).unwrap();
+        assert!(overlap.is_mobile());
+        assert!(overlap.is_geographic());
+
+        for code in ["80", "87", "92"] {
+            let value = with_code(code);
+            let phone = PhoneNumber::parse_strict(&value).unwrap();
+            assert!(phone.is_mobile());
+        }
+
+        let sip = PhoneNumber::parse(&with_code("55")).unwrap();
+        assert!(sip.is_known_operator());
+        assert!(sip.is_sip());
+        assert!(!sip.is_mobile());
+
+        let fixed = PhoneNumber::parse(&with_code("78")).unwrap();
+        assert!(fixed.is_known_operator());
+        assert!(fixed.is_non_geographic_fixed());
+
+        let geographic = PhoneNumber::parse(&with_code("71")).unwrap();
+        assert!(geographic.is_geographic());
+        assert!(!geographic.is_mobile());
+    }
+
+    #[test]
+    fn unassigned_codes_are_only_structurally_valid() {
+        for code in ["00", "60", "63", "64", "68"] {
+            let value = with_code(code);
+            let phone = PhoneNumber::parse(&value).unwrap();
+            assert!(!phone.is_known_operator(), "{code}");
+            assert_eq!(
+                PhoneNumber::parse_strict(&value),
+                Err(PhoneNumberError::UnknownOperatorCode),
+                "{code}"
+            );
+        }
     }
 }

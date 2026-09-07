@@ -21,6 +21,7 @@
 //! - `zeroize` — sir tiplari `Drop` da xotirani tozalaydi;
 //! - `serialize-secrets` — sir tiplari uchun `Serialize`.
 
+mod calendar;
 mod macros;
 
 #[cfg(feature = "serde")]

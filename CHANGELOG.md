@@ -8,6 +8,78 @@ Breaking o'zgarishlar ⚠️ bilan belgilanadi va reliz oxirida migratsiya jadva
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-09-07
+
+Bu reliz production qo'llash uchun isbotlangan domen va SQLx nuqsonlarini yopadi:
+PINFL strict yo'li endi to'liq Gregorian sanani `date` feature'idan mustaqil
+tekshiradi, telefon registri ITU va operator manbalariga tayangan aniq to'plamlarga
+o'tdi, PostgreSQL `VARCHAR[]` decode yo'li tuzatildi va jonli PostgreSQL 16
+roundtrip'i CI bilan qulflandi. Base `parse()` kontraktlari, feature nomlari,
+`TypeError` variantlari va sir tiplari sirti o'zgarmadi.
+
+### Qo'shildi
+
+- Feature'dan mustaqil private Gregorian calendar helper va 1800–2099 yillarni
+  Chrono oracle bilan to'liq solishtiradigan test qo'shildi.
+- PINFL uchun ikkinchi rasmiy (ayol) vektor hamda raw qiymatni log qilmaydigan,
+  `PINFL_SAMPLE_FILE` orqali aynan 1000 qatorni strict tekshiradigan ignored audit harnessi qo'shildi.
+- `PhoneNumber::GEOGRAPHIC_CODES`, `SIP_CODES`, `NON_GEOGRAPHIC_FIXED_CODES` exact
+  slice'lari va `is_geographic()`, `is_sip()`, `is_non_geographic_fixed()` metodlari qo'shildi.
+- PostgreSQL 16da TEXT/VARCHAR, DATE/UUID/BIGINT, NULL, massiv va domen xatolarini
+  tekshiradigan ignored SQLx integration testlari, `just postgres-test` hamda alohida
+  `live-postgres` CI jobi qo'shildi.
+
+### ⚠️ Breaking
+
+- Checksum'i to'g'ri, ammo sanasi haqiqiy bo'lmagan PINFL (`31.02`, `31.04`,
+  `29.02.1900`) uchun `birth_date_parts()` endi `Some` o'rniga `None`,
+  `parse_strict()` esa `Ok` o'rniga `PinflError::Structure` qaytaradi.
+- Non-ASCII `Passport` va `Pinfl` kirishida error ustuvorligi o'zgardi: ko'p baytli
+  homoglyphlar `Length` o'rniga `Format` qaytaradi. ASCII qisqa/uzun inputlarda
+  `Length` saqlanadi.
+- Telefon strict registri endi deprecated `60..=79` oralig'ini ishlatmaydi:
+  `60`, `63`, `64`, `68` kodlari `UnknownOperatorCode`; `55` esa mobil emas, SIP.
+  Bu `parse()`ga ta'sir qilmaydi.
+
+### O'zgardi
+
+- `PhoneNumber::MOBILE_CODES` exact ro'yxati yangilandi: mavjud `20` saqlandi,
+  `70`, `80`, `87`, `92` qo'shildi va SIP kodi `55` chiqarildi. `70` mobil hamda
+  geografik bo'lgani uchun tasniflar o'zaro istisno emas.
+- `REGIONAL_CODES = 60..=79` compatibility uchun saqlandi, ammo deprecated;
+  yangi kodda exact classification konstantalaridan foydalaniladi.
+- `Pinfl::parse()` faqat 14 ta ASCII raqamni tekshirishda davom etadi;
+  `parse_strict()` endi checksum va jins/asr bilan birga to'liq Gregorian sanani
+  `date` feature'idan mustaqil tekshiradi.
+
+### Tuzatildi
+
+- String newtype'larning PostgreSQL `PgHasArrayType::array_compatible()` yo'li ichki
+  `String`ga, `NumId<Tag, R>`niki `i64`ga delegatsiya qilindi. Shu bilan
+  `VARCHAR[]`, `array_agg(VARCHAR)` va `= ANY($1)` encode/decode yo'llari yopildi.
+- `Passport` validatsiyasi non-ASCII matnda bayt indeksidan oldin formatni tekshiradi;
+  ko'p baytli input uchun panic-safe xato tasnifi aniqlandi.
+
+### Hujjatlashtirildi
+
+- PINFL uchun LexUZ, telefon uchun ITU va operator provenance/freshness chegaralari,
+  base `parse()` va strict input siyosati hujjatlashtirildi.
+- SQLx 0.9/Rust 1.94 rollout talablari, DB-siz `just ci` va alohida jonli PostgreSQL
+  qatlami, legacy/NULL/array/ID/email/sir auditlari uchun production checklist qo'shildi.
+- SQLx 0.9 oddiy `Query::bind()` encode leaf'ini matnga aylantirishi, aniq
+  `IdError` uchun `Query::try_bind()` yoki `try_new_db_safe()` kerakligi yozildi.
+
+### Migratsiya 0.22 → 0.23
+
+| 0.22 | 0.23 ga o'tish |
+| --- | --- |
+| DB/Kafka/Serde qiymatini joriy strict siyosat bilan o'qish | Replay uchun `parse()`/default Decode/Deserialize'ni saqlang; faqat joriy user inputida `parse_strict()` chaqiring. |
+| `REGIONAL_CODES.contains(&code)` yoki barcha `60..=79`ni valid deb bilish | `GEOGRAPHIC_CODES`, `SIP_CODES`, `NON_GEOGRAPHIC_FIXED_CODES`, `MOBILE_CODES` yoki mos `is_*()` metodini tanlang. |
+| `55`ni mobil deb tasniflash | `is_sip()` ishlating; geografik bo'lmagan statsionar `78` uchun `is_non_geographic_fixed()`. |
+| Consumerga kerak bo'lgan `60`/`63`/`64`/`68` strict'dan o'tadi | Kerak bo'lsa consumer qatlamida hujjatlashtirilgan alohida allowlist qo'shing; crate base `parse()` strukturani qabul qiladi. |
+| UI matni `Length`/`Format` variantiga qat'iy bog'langan | Public enum `#[non_exhaustive]`; xatoni barqaror consumer kategoriyasiga map qiling va non-ASCII holatini qayta sinang. |
+| PINFL sana qismlari faqat kun/oy oralig'i bilan olinadi | `None`/`PinflError::Structure`ni qabul qiling; legacy yozuvni yo'qotmaslik uchun avval base `parse()` bilan audit qiling. |
+
 ## [0.22.0] — 2026-09-07
 
 Bu reliz public enumlar uchun loyiha invariantini tiklaydi: `Gender` endi
@@ -563,9 +635,7 @@ Bu versiyalar uchun o'zgarishlar hujjatlashtirilmagan — git tarixiga qarang.
 
 ## Rejalashtirilgan
 
-**1.0 gacha**: Postgres integration testlari CI'da (`#[sqlx::test]`) — hozircha
-sqlx impl'lari faqat compile-time tekshiriladi, jonli DB'da sinalmagan;
-`deny.toml` (litsenziya/manba siyosati).
+**1.0 gacha**: `deny.toml` (litsenziya/manba siyosati).
 
 **1.0.0**: `cargo semver-checks` kamida bitta minor reliz davomida yashil bo'lgandan va 0.18/0.19
 real servisda ishlatilgandan keyin. Feature nomlari va public API qulflanadi.
@@ -573,7 +643,8 @@ real servisda ishlatilgandan keyin. Feature nomlari va public API qulflanadi.
 **1.0 dan keyin** (yangi tiplar, crate'ga kirmaydi): `Inn`/`Stir`, `BankCard` (Luhn), `Mfo`,
 `AccountNumber`; `PhoneNumber::parse_local()` (9 raqamli mahalliy shakl).
 
-[Unreleased]: https://github.com/diordev/uz-types/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/diordev/uz-types/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/diordev/uz-types/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/diordev/uz-types/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/diordev/uz-types/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/diordev/uz-types/compare/v0.19.0...v0.20.0

@@ -46,6 +46,7 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 - [Xatolar bilan ishlash](#xatolar-bilan-ishlash)
 - [serde integratsiyasi](#serde-integratsiyasi)
 - [sqlx integratsiyasi](#sqlx-integratsiyasi)
+- [Production joriy etish](#production-joriy-etish)
 - [Cheklovlar](#cheklovlar)
 - [MSRV va semver](#msrv-va-semver)
 - [Rivojlantirish](#rivojlantirish)
@@ -59,7 +60,7 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Qat'iy tiplash**            | `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `Id<Tag>`, `NumId<Tag>`, `AccessToken`, `RefreshToken`, `ClientSecret`                    |
 | **Yagona konstruktor yo'li**  | `parse()`, `FromStr`, `TryFrom`, serde `Deserialize`, sqlx `Decode` — hammasi **bitta** validatsiya yo'lidan o'tadi. Validatsiyani chetlab o'tib tip yaratib bo'lmaydi |
-| **Ikki qatlamli validatsiya** | `parse()` — hech qachon o'zgarmaydigan struktura; `parse_strict()` — o'zgaruvchan qoidalar (operator kodlari ro'yxati, PINFL checksum)                                 |
+| **Ikki qatlamli validatsiya** | `parse()` — barqaror struktura; `parse_strict()` — telefon registri yoki PINFL checksum + jins/asr + to'liq Gregorian sana                                  |
 | **Aniq xatolar**              | Har bir tipning o'z error enum'i (`PassportError`, `PinflError`, …); umumiy `TypeError` `?` orqali avtomatik yig'iladi                                                 |
 | **Xavfsiz sirlar**            | Token tiplarida `Display` yo'q, `Debug` yashirilgan, taqqoslash constant-time; sirni faqat `expose_secret()` ochadi                                                    |
 | **Minimal allocation**        | `String` dan yaratishda qo'shimcha allocation yo'q (normalizatsiya in-place); `&str` dan — bitta                                                                       |
@@ -72,14 +73,14 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 
 ```toml
 [dependencies]
-uz-types = "0.22"
+uz-types = "0.23"
 ```
 
 Yoki kerakli feature'lar bilan:
 
 ```toml
 [dependencies]
-uz-types = { version = "0.22", features = ["serde", "sqlx-postgres"] }
+uz-types = { version = "0.23", features = ["serde", "sqlx-postgres"] }
 ```
 
 | Feature             | Default | Nima yoqadi                                                                    | Qo'shimcha dependency |
@@ -95,8 +96,11 @@ uz-types = { version = "0.22", features = ["serde", "sqlx-postgres"] }
 **Qoida:** tiplar default'da bor, integratsiyalar — siz tanlaysiz. Faqat `Passport` kerak bo'lgan servis `chrono`/`uuid` ni ham xohlamasa:
 
 ```toml
-uz-types = { version = "0.22", default-features = false }
+uz-types = { version = "0.23", default-features = false }
 ```
+
+`Pinfl::parse_strict()`ning Gregorian tekshiruvi `date` feature'iga bog'liq emas;
+`date` faqat sana qismlarini `BirthDate`ga aylantiradigan metodlarni yoqadi.
 
 ---
 
@@ -116,7 +120,7 @@ fn main() -> Result<(), TypeError> {
     let passport = Passport::parse("aa 1234567")?;
     println!("{passport} | seriya: {} | raqam: {}", passport.series(), passport.number());
 
-    // PINFL — parse: faqat 14 raqam; parse_strict: + rasmiy checksum va struktura
+    // PINFL — parse: 14 ASCII raqam; strict: + checksum, jins/asr va Gregorian sana
     let pinfl = Pinfl::parse_strict("31210932040247")?;
     println!("{pinfl} | jins: {:?} | tug'ilgan: {:?}", pinfl.gender(), pinfl.birth_date_parts());
 
@@ -151,10 +155,10 @@ fn main() -> Result<(), TypeError> {
 
 Har bir qoida ikki turdan biriga kiradi:
 
-| Qatlam                | Nima tekshiradi                                               | O'zgaradimi?         | Qayerda                               |
-| --------------------- | ------------------------------------------------------------- | -------------------- | ------------------------------------- |
-| **Struktura**         | uzunlik, belgilar, prefiks, kalendar sanasi                   | Hech qachon          | `parse()`                             |
-| **Registry / biznes** | operator kodi ro'yxatda bormi, PINFL nazorat raqami to'g'rimi | Ha, vaqt-vaqti bilan | `is_*()` metodlar va `parse_strict()` |
+| Qatlam                  | Nima tekshiradi                                                                  | Qayerda                               |
+| ----------------------- | -------------------------------------------------------------------------------- | ------------------------------------- |
+| **Barqaror struktura**  | uzunlik, ASCII belgilar va prefiks; `Pinfl` uchun aynan 14 ta ASCII raqam         | `parse()`                             |
+| **Qat'iy joriy kirish** | telefon kodi registri; PINFL checksum'i, jins/asr indeksi va to'liq Gregorian sana | `is_*()` metodlar va `parse_strict()` |
 
 Nega shunday? Agar operator kodlari ro'yxati `parse()` ichida bo'lsa, yangi kod ajratilganda **yangi foydalanuvchilar rad etiladi**, tuzatish uchun esa crate relizi va barcha servislarni deploy qilish kerak — DB yoki Kafka'dagi eski yozuvlar ham o'qilmay qoladi. Shuning uchun:
 
@@ -172,7 +176,11 @@ assert_eq!(
 );
 ```
 
-Qisqa qoida: **DB/Kafka/ichki chegara → `parse()`; foydalanuvchi kiritgan ma'lumot → `parse_strict()`.**
+`Pinfl::parse()` ham checksum yoki sanani emas, faqat 14 ta ASCII raqamni tekshiradi;
+`Pinfl::parse_strict()` esa checksum, jins/asr indeksi va `31.02`/`29.02.1900` kabi
+noto'g'ri Gregorian sanalarni ham rad etadi.
+
+Qisqa qoida: **DB/Kafka/Serde replay → `parse()`; foydalanuvchi kiritgan ma'lumot → `parse_strict()`.**
 
 ---
 
@@ -198,7 +206,8 @@ Faqat **format** tekshiriladi — seriya amaldagi ro'yxatga kiradimi, bu tekshir
 
 ### Pinfl (JShShIR)
 
-14 raqamli shaxsiy identifikatsiya raqami. Struktura rasmiy hujjatga asoslangan (Vazirlar Mahkamasining 2022-yil 12-apreldagi 177-son qarori):
+14 raqamli shaxsiy identifikatsiya raqami. Tuzilishi, `7-3-1` checksum formulasi va
+quyidagi misollar [Vazirlar Mahkamasining 2022-yil 12-apreldagi 177-son qarori](https://lex.uz/uz/docs/-5955665)ga asoslangan:
 
 | Raqamlar | Ma'nosi                                                                                                     |
 | -------- | ----------------------------------------------------------------------------------------------------------- |
@@ -220,8 +229,11 @@ assert_eq!(p.birth_date_parts(), Some((1993, 10, 12)));   // (yil, oy, kun)
 assert_eq!(p.region_code(), "204");
 assert_eq!(p.serial(), "024");
 
-// parse_strict — struktura + checksum + jins/asr belgisi + sana strukturasi
+// parse_strict — struktura + checksum + jins/asr belgisi + to'liq Gregorian sana
 assert!(Pinfl::parse_strict("31210932040247").is_ok());
+let female = Pinfl::parse_strict("40201902050010").unwrap();
+assert_eq!(female.gender(), Some(Gender::Female));
+assert_eq!(female.birth_date_parts(), Some((1990, 1, 2)));
 assert_eq!(Pinfl::parse_strict("31210932040248"), Err(PinflError::Checksum));
 assert_eq!(Pinfl::parse_strict("00000000000000"), Err(PinflError::Structure));
 
@@ -247,14 +259,35 @@ assert_eq!(phone.operator_code(), "71");
 assert_eq!(phone.subscriber_number(), "1234567");
 assert_eq!(phone.to_international(), "+998711234567");
 assert!(!phone.is_mobile());            // 71 — Toshkent shahar kodi
-assert!(phone.is_known_operator());     // hudud kodlari oralig'ida (60..=79)
+assert!(phone.is_geographic());
+assert!(phone.is_known_operator());
+
+let overlap = PhoneNumber::parse_strict("998701234567").unwrap();
+assert!(overlap.is_mobile());
+assert!(overlap.is_geographic());       // 70 ikkala xizmat turida ishlatiladi
 
 assert_eq!(PhoneNumber::parse("997901234567"), Err(PhoneNumberError::Prefix));
 assert_eq!(PhoneNumber::parse("99890123456"), Err(PhoneNumberError::Length));
 assert_eq!(PhoneNumber::parse("998a01234567"), Err(PhoneNumberError::Format));
 ```
 
-Ma'lum kodlar `PhoneNumber::MOBILE_CODES` (slice) va `PhoneNumber::REGIONAL_CODES` (`60..=79`) konstantalarida. Ro'yxat eskirsa ham `parse()` ishlayveradi — faqat `is_known_operator()` / `parse_strict()` ta'sirlanadi.
+Aniq tasniflar `MOBILE_CODES`, `GEOGRAPHIC_CODES`, `SIP_CODES` (`55`) va
+`NON_GEOGRAPHIC_FIXED_CODES` (`78`) slice'larida. Eski `REGIONAL_CODES = 60..=79`
+deprecate qilingan: oraliq ichidagi `60`, `63`, `64`, `68` aniq registrda yo'q, `70`
+esa ham mobil, ham geografik. Boshlang'ich manba — [ITU E.164 rejasi](https://www.itu.int/dms_pub/itu-t/opb/sp/T-SP-OB.1263-2023-OAS-PDF-E.pdf);
+yangi mobil ajratmalar operatorlarning [20](https://beeline.uz/uz/phone-codes),
+[70](https://uztelecom.uz/uz/yangiliklar/yangiliklar/uztelecom-yangi-operator-kodi-plus998-70-ni-taqdim-etadi/),
+[80](https://perfectum.uz/uz/cdma), [87](https://company.mobi.uz/uz/press/2026/101857/)
+va [92](https://beeline.uz/uz/events/news/novyy-kod-beeline-uzbekistan_92) sahifalari
+bilan to'ldirilgan. Registry vaqt o'tishi bilan eskirishi mumkin; bu `parse()`ga ta'sir
+qilmaydi, faqat `is_*()` va `parse_strict()` natijasini o'zgartiradi.
+
+| Tasnif | Exact kodlar |
+| --- | --- |
+| Mobil | `20, 33, 50, 70, 77, 80, 87, 88, 90, 91, 92, 93, 94, 95, 97, 98, 99` |
+| Geografik PSTN | `61, 62, 65, 66, 67, 69, 70, 71, 72, 73, 74, 75, 76, 79` |
+| SIP | `55` |
+| Geografik bo'lmagan statsionar | `78` |
 
 ### EmailAddress
 
@@ -510,6 +543,19 @@ assert_eq!(user.phone.as_str(), "998901234567");
 
 assert!(serde_json::from_str::<Passport>("\"nope\"").is_err());
 assert!(serde_json::from_str::<PhoneNumber>("\"997901234567\"").is_err());
+
+// Replay strukturaviy parserdan o'tadi; joriy registry/checksum siyosati keyin tekshiriladi.
+let replay_phone: PhoneNumber = serde_json::from_str("\"998000000000\"").unwrap();
+assert!(!replay_phone.is_known_operator());
+assert_eq!(
+    PhoneNumber::parse_strict(replay_phone.as_str()),
+    Err(PhoneNumberError::UnknownOperatorCode)
+);
+let replay_pinfl: Pinfl = serde_json::from_str("\"31210932040248\"").unwrap();
+assert_eq!(
+    Pinfl::parse_strict(replay_pinfl.as_str()),
+    Err(PinflError::Checksum)
+);
 # }
 ```
 
@@ -529,6 +575,10 @@ assert!(serde_json::from_str::<PhoneNumber>("\"997901234567\"").is_err());
 | `NumId<Tag, R>`                                                | `BIGINT`           |
 
 `Decode` ham `parse()` orqali o'tadi: DB'dagi buzuq yozuv `try_get` da xato beradi, jimgina ichkariga kirmaydi.
+`NumId<Tag, u64>` overflow'ida SQLx 0.9 `Query::try_bind()` aniq `IdError`ni
+qaytaradi; oddiy `bind()` uni ichkarida matnga aylantirib, executionda tashqi
+`sqlx::Error::Encode`ni beradi. Leaf kerak bo'lsa `try_bind()` yoki input chegarasida
+`try_new_db_safe()` ishlating.
 
 ```rust,ignore
 use uz_types::prelude::*;
@@ -556,7 +606,52 @@ let passports: Vec<Passport> = vec![/* … */];
 sqlx::query("SELECT * FROM users WHERE passport = ANY($1)").bind(&passports);
 ```
 
-**Migratsiya eslatmasi:** eski tizimdan kelgan DB'da `parse()` strukturasiga mos kelmaydigan yozuvlar (masalan, 13 raqamli PINFL) bo'lsa, ular `SELECT` da xato beradi — migratsiyadan oldin ma'lumotni tozalang. `parse_strict` darajasi (checksum) talab qilinmaydi.
+`sqlx-postgres` string newtype'larning ichki `String` qoidalarini massivlarga ham
+delegatsiya qiladi: `TEXT[]` va `VARCHAR[]` `Vec<Passport>` kabi decode qilinadi,
+`VARCHAR` ustunidagi `array_agg(...)` natijasi olinadi va `Vec<T>`ni
+`= ANY($1)`ga bind qilish ishlaydi. Bular PostgreSQL 16 service'ida jonli tekshiriladi:
+
+```bash
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test
+```
+
+Oddiy `cargo test --all-features` jonli testlarni kompilyatsiya qiladi, ammo ular
+`#[ignore]`; `just ci` ham DB service talab qilmaydi. GitHub CI esa alohida
+`live-postgres` jobida `just postgres-test`ni bajaradi.
+
+**Migratsiya eslatmasi:** eski tizimdan kelgan DB'da `parse()` strukturasiga mos
+kelmaydigan yozuvlar (masalan, 13 raqamli PINFL) bo'lsa, ular `SELECT`da xato beradi —
+migratsiyadan oldin ma'lumotni tozalang. `parse_strict` darajasi (checksum va joriy
+registry) replay paytida talab qilinmaydi. Repozitoriydagi sintetik testlar va ixtiyoriy
+maxfiy PINFL sample auditi iste'molchining haqiqiy legacy ma'lumotlari toza ekanini
+isbotlamaydi.
+
+---
+
+## Production joriy etish
+
+Yangilashdan oldin iste'molchi servisda quyidagilarni tekshiring:
+
+- Asosiy crate uchun `rustc >= 1.85`; `sqlx`/`sqlx-postgres` uchun `rustc >= 1.94`
+  va SQLx 0.9 ishlating.
+- `cargo tree -d` bilan SQLx 0.8 va 0.9 birga tortilmaganini tekshiring. Servis SQLx
+  0.8da qolsa, `uz-types`ning SQLx feature'ini yoqmang va DB qatlamida qo'lda
+  `String`/`Uuid`/`i64` orqali map qiling.
+- Yangilangan `Cargo.lock`ni commit qiling; deploydan oldin legacy jadvallar va eventlarda
+  strukturaviy invalid qiymat, `NULL`, `TEXT[]`/`VARCHAR[]` hamda ID chegaralarini audit qiling.
+- Email normalizatsiyasi local-partni ham lowercase qiladi: unique indeks yoki merge oldidan
+  lowercase collision'larni tekshiring.
+- Yosh biznes qoidasini `BirthDate::age_at(local_today)` bilan, servisning mahalliy
+  sanasini aniq uzatib hisoblang.
+- PostgreSQL `BIGINT` uchun odatda `NumId<Tag, i64>`ni tanlang. `u64` ishlatilsa
+  `i64::MAX` chegarasini inputda tekshiring; JavaScript DTO'da `2^53`dan katta ID'ni
+  string sifatida yuboring.
+- Nil UUID taqiqlanishi kerak bo'lsa, uni crate parseridan tashqarida consumer biznes
+  qoidasi sifatida rad eting.
+- Sir tiplarining `MAX_TOKEN_LEN` chegarasi xotiraga allaqachon olingan body'ni
+  himoya qilmaydi; HTTP/body limitini framework darajasida oldindan qo'ying.
+- DB/Kafka/Serde replay uchun `parse()`, joriy foydalanuvchi inputi uchun
+  `parse_strict()` ishlating va disposable PostgreSQLda `just postgres-test`ni o'tkazing.
 
 ---
 
@@ -565,8 +660,8 @@ sqlx::query("SELECT * FROM users WHERE passport = ANY($1)").bind(&passports);
 | Tip            | Cheklov                                                                                                                                                                                                           |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Passport`     | Faqat format. Seriya amaldagi ro'yxatga kiradimi — tekshirilmaydi.                                                                                                                                                |
-| `Pinfl`        | `parse()` faqat 14 raqam. Checksum, jins/asr va sana — `parse_strict()` yoki query metodlar. Haqiqiy shaxsga tegishliligini faqat davlat xizmati (my.gov.uz va h.k.) tasdiqlaydi.                                 |
-| `PhoneNumber`  | 9 raqamli mahalliy shakl (`90 123 45 67`) qabul qilinmaydi — `998` bilan yuboring. `MOBILE_CODES` ro'yxati crate ichida; eskirsa `parse()` ta'sirlanmaydi, `is_known_operator()` / `parse_strict()` ta'sirlanadi. |
+| `Pinfl`        | `parse()` faqat 14 ta ASCII raqam. Checksum, jins/asr va to'liq Gregorian sana — `parse_strict()` yoki query metodlar. Haqiqiy shaxsga tegishliligini faqat davlat xizmati (my.gov.uz va h.k.) tasdiqlaydi.                     |
+| `PhoneNumber`  | 9 raqamli mahalliy shakl (`90 123 45 67`) qabul qilinmaydi — `998` bilan yuboring. Exact kod slice'lari crate ichida; eskirsa `parse()` ta'sirlanmaydi, `is_*()` / `parse_strict()` ta'sirlanadi.                               |
 | `EmailAddress` | Faqat ASCII. IDN (unicode domenlar), quoted local-part (`"a b"@x.com`) va IP-literal (`a@[1.2.3.4]`) qabul qilinmaydi. Local-part ham lowercase qilinadi.                                                         |
 | `BirthDate`    | `parse()`/`age()` tizim soatiga (UTC) tayanadi; testlarda `*_at()` variantlarini ishlating.                                                                                                                       |
 | `NumId<Tag>`   | `u64` repr: `i64::MAX` dan katta qiymat `Encode` da, DB'dagi manfiy qiymat `Decode` da xato beradi — ya'ni **query paytida**. Chegarani `parse_db_safe()`/`try_new_db_safe()` bilan input tomoniga qo'ying yoki `NumId<Tag, i64>` ishlating (u yerda xato yo'li umuman yo'q). `2^53` dan katta ID JSON orqali JS client'ga borsa aniqligini yo'qotadi. |
@@ -578,7 +673,9 @@ sqlx::query("SELECT * FROM users WHERE passport = ANY($1)").bind(&passports);
 
 - **MSRV: Rust 1.85** (edition 2024). MSRV ko'tarilishi _minor_ reliz hisoblanadi.
 - **`sqlx` va `sqlx-postgres` feature'lari Rust 1.94+ talab qiladi** (`sqlx 0.9` ning o'z MSRV'i). Cargo per-feature MSRV'ni qo'llab-quvvatlamaydi, shuning uchun `Cargo.toml` dagi `rust-version` eng past umumiy qiymat — 1.85. CI ikkala polni alohida tekshiradi.
-- MSRV kutubxona iste'molchisi uchun: dev-dependency'lar (`criterion` → 1.86) hisobga olinmaydi, chunki downstream ularni yuklamaydi. `cargo bench` uchun 1.86+ kerak.
+- MSRV kutubxona iste'molchisi uchun `cargo check` bilan o'lchanadi: dev-dependency'lar
+  (`criterion` → 1.86, jonli SQLx test vositalari → 1.94) downstreamga kirmaydi.
+  `cargo bench` uchun 1.86+, `postgres-test` uchun 1.94+ kerak.
 - Barcha public enum'lar `#[non_exhaustive]` — `match` da `_` tarmog'ini qoldiring.
 - Public konstantalar slice/`RangeInclusive` — yangi kod qo'shilishi breaking emas.
 - Feature nomlari 1.0 gacha qulflangan: `date`, `id`, `serde`, `sqlx`, `sqlx-postgres`, `zeroize`, `serialize-secrets`.
@@ -592,10 +689,12 @@ Talab: [`just`](https://just.systems), `cargo-hack`, `cargo-audit`, `cargo-mache
 
 ```bash
 just check          # TEZ (~3s): fmt + clippy + test + rustdoc — commit'dan oldin
-just ci             # TO'LIQ (~80s): check + example + features + msrv + package + audit + semver
+just ci             # DB-SIZ (~80s): check + example + features + msrv + package + audit + semver
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test
 ```
 
-`just ci` — CI'dagi job'larning aynan o'zi; `publish-check` unga tayanadi. Alohida qismlar:
+`just ci` — PostgreSQL service talab qilmaydigan CI suite'i; `publish-check` unga
+tayanadi. Jonli DB qatlami CI'da va lokal ishda alohida `postgres-test`. Alohida qismlar:
 
 | Recipe | Nima qiladi |
 | ---------------- | ----------------------------------------------------------------------------- |
@@ -605,17 +704,20 @@ just ci             # TO'LIQ (~80s): check + example + features + msrv + package
 | `just semver-detail` | aynan **nima** breaking ekanini ko'rsatadi — CHANGELOG yozishdan oldin     |
 | `just audit`     | `cargo audit` (CVE) + `cargo machete` (ishlatilmagan dep) — tarmoq kerak       |
 | `just bench`     | criterion benchmark (`benches/parse.rs`) — Rust 1.86+ kerak                    |
+| `just postgres-test` | PostgreSQL 16 da scalar, NULL, massiv va xato roundtrip'lari — Rust 1.94   |
 
-`just check` ataylab tarmoqsiz va tez; `audit` va `semver` `ci` da turadi.
+`just check` warm cache bilan tez; birinchi dependency yuklanishi tarmoq talab qilishi mumkin.
+`audit` va `semver` `ci` da turadi.
 Justfile `RUSTFLAGS=-D warnings` ni CI bilan bir xil qilib eksport qiladi — shuning
 uchun `just test` va oddiy `cargo test` orasida almashganda qayta build bo'ladi.
 
 Testlar: unit (modul ichida) + integration (`tests/serde.rs`, `tests/sqlx_bounds.rs`,
-`tests/compile_fail.rs`) + property-based. `tests/props.rs` to'rtta `string_newtype!`
+`tests/sqlx_postgres.rs`, `tests/pinfl_dataset.rs`, `tests/compile_fail.rs`) + property-based.
+`tests/props.rs` to'rtta `string_newtype!`
 tipini `\\PC{0,64}` generatorida panic qilmaslik va muvaffaqiyatli `parse`ning
 idempotentligi bo'yicha tekshiradi. `tests/sqlx_bounds.rs` SQLx trait'larini
-**compile-time**'da qulflaydi — jonli DB talab qilinmaydi va Postgres integration
-testi hozircha yo'q.
+DB-siz qulflaydi; ignored `tests/sqlx_postgres.rs` esa `just postgres-test` orqali
+PostgreSQL 16da haqiqiy encode/decode/query yo'llarini tekshiradi.
 
 README `src/lib.rs` orqali crate hujjatiga `date` va `id` feature'lari yoqilganda
 qo'shiladi. `cargo test --all-features --doc` oddiy `rust` bloklarini bajaradi va

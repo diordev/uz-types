@@ -532,7 +532,10 @@ impl<'de, Tag, R: NumIdRepr> serde::Deserialize<'de> for NumId<Tag, R> {
 /// `NumId<Tag, i64>` da `Encode`/`Decode` **total** — xato yo'li yo'q.
 /// `NumId<Tag, u64>` da esa [`IdError::NumberTooLarge`] (Encode) va
 /// [`IdError::NumberNegative`] (Decode) bo'lishi mumkin — bu xatolar strukturali,
-/// `BoxDynError` ichida ham `downcast_ref::<IdError>()` bilan ushlanadi.
+/// bevosita `Encode` yoki SQLx 0.9 `Query::try_bind()` qaytargan `BoxDynError` ichida
+/// `downcast_ref::<IdError>()` bilan ushlanadi. Oddiy `Query::bind()` encode sababini
+/// matnga aylantiradi va execution paytida faqat tashqi `sqlx::Error::Encode` qoladi;
+/// aniq xatoni oldin olish uchun [`NumId::try_new_db_safe`] ham ishlatilishi mumkin.
 #[cfg(feature = "sqlx")]
 mod sqlx_impls {
     use super::{NumId, NumIdRepr};
@@ -576,6 +579,10 @@ mod sqlx_impls {
     impl<Tag, R: NumIdRepr> sqlx::postgres::PgHasArrayType for NumId<Tag, R> {
         fn array_type_info() -> sqlx::postgres::PgTypeInfo {
             <i64 as sqlx::postgres::PgHasArrayType>::array_type_info()
+        }
+
+        fn array_compatible(ty: &sqlx::postgres::PgTypeInfo) -> bool {
+            <i64 as sqlx::postgres::PgHasArrayType>::array_compatible(ty)
         }
     }
 }

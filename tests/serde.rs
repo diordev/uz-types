@@ -25,6 +25,22 @@ fn string_newtypes_roundtrip_and_reject_invalid() {
     assert!(serde_json::from_str::<Pinfl>("\"12345\"").is_err());
     assert!(serde_json::from_str::<EmailAddress>("\"not-an-email\"").is_err());
     assert!(serde_json::from_str::<AccessToken>("\"\"").is_err());
+
+    // Serde saqlangan qiymatlarni bazaviy parser orqali qayta o'qiydi. Joriy
+    // registry va checksum siyosati iste'molchi chegarasida explicit tekshiriladi.
+    let unknown_phone = serde_json::from_str::<PhoneNumber>("\"998001234567\"").unwrap();
+    assert!(!unknown_phone.is_known_operator());
+    assert_eq!(
+        PhoneNumber::parse_strict(unknown_phone.as_str()),
+        Err(PhoneNumberError::UnknownOperatorCode)
+    );
+
+    let checksum_invalid = serde_json::from_str::<Pinfl>("\"31210932040248\"").unwrap();
+    assert_eq!(
+        Pinfl::parse_strict(checksum_invalid.as_str()),
+        Err(PinflError::Checksum)
+    );
+
     // Xato xabari `expecting` ni o'z ichiga oladi
     let err = serde_json::from_str::<Passport>("42")
         .unwrap_err()

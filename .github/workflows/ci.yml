@@ -81,6 +81,34 @@ jobs:
       - name: Barcha feature'lar bilan build
         run: cargo check --all-targets --all-features
 
+  live-postgres:
+    name: PostgreSQL 16 roundtrip
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.94.0
+      - uses: taiki-e/install-action@just
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Jonli PostgreSQL testlari
+        run: just postgres-test
+
   # `--all-features` bitta nuqta — feature kombinatsiyalari alohida tekshiriladi.
   # Ro'yxat Cargo.toml dan olinadi, qo'lda yozilmaydi.
   features:

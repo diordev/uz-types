@@ -41,10 +41,11 @@ doc:
 # TEKSHIRUVLAR (hech nimani o'zgartirmaydi)
 # ==========================================
 
-# Tez tekshiruv — kundalik, commit'dan oldin (~3s warm). Tarmoq talab qilmaydi.
+# Tez tekshiruv — kundalik, commit'dan oldin (~3s warm; cache holatiga bog'liq).
 check: fmt-check lint test doc-check
 
-# CI ning AYNAN o'zi — push'dan oldin (~80s warm). To'liq parity.
+# DB service talab qilmaydigan CI suite — push'dan oldin (~80s warm).
+# Jonli PostgreSQL job alohida `postgres-test` orqali ishlaydi.
 ci: check example features msrv package audit semver
 
 # Format tekshiruvi
@@ -97,12 +98,18 @@ msrv:
     cargo +1.85.0 check --features date,id,serde,zeroize,serialize-secrets
     cargo +1.94.0 check --all-targets --all-features
 
+# Jonli PostgreSQL roundtrip. Talab: Rust 1.94 va CREATE DATABASE huquqli disposable DATABASE_URL.
+postgres-test:
+    @test -n "${DATABASE_URL:-}" || { echo "xato: DATABASE_URL kerak (disposable PostgreSQL, CREATE DATABASE huquqi bilan)" >&2; exit 1; }
+    cargo +1.94.0 test --all-features --test sqlx_postgres -- --ignored
+
 # ==========================================
 # RELIZ
 # ==========================================
 
 # Diqqat: working tree TOZA bo'lishi kerak, aks holda cargo "uncommitted changes" beradi.
-# Publishga tayyorlikni tekshirish (dry-run) — to'liq `ci` dan keyin
+# Publishga tayyorlikni tekshirish (dry-run) — DB-siz `ci` dan keyin;
+# SQLx o'zgargan bo'lsa `postgres-test`ni alohida o'tkazing.
 publish-check: ci
     cargo publish --dry-run --locked
 
