@@ -98,14 +98,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Ikkala qator ham 1.94: `cargo test` dev-dependency'larni (criterion → 1.86,
-          # sqlx 0.9 dev-dep → 1.94) har doim resolve qiladi. Kutubxonaning o'zi
-          # 1.85 da sqlx 0.8 bilan resolve bo'lishini `msrv` jobi qulflaydi.
+          # Toolchain matritsada emas: `uses:` maydonida `${{ }}` ifodasi
+          # qo'llab-quvvatlanmaydi (workflow parse bo'lmaydi). Ikkala qator ham
+          # 1.94da ishlaydi, chunki `cargo test` dev-dependency'larni
+          # (criterion → 1.86, sqlx 0.9 dev-dep → 1.94) har doim resolve qiladi.
+          # Kutubxonaning o'zi 1.85 da sqlx 0.8 bilan resolve bo'lishini `msrv`
+          # jobi alohida qulflaydi.
           - sqlx: "0.8"
-            toolchain: "1.94.0"
             recipe: postgres-test-08
           - sqlx: "0.9"
-            toolchain: "1.94.0"
             recipe: postgres-test
     services:
       postgres:
@@ -125,7 +126,7 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@${{ matrix.toolchain }}
+      - uses: dtolnay/rust-toolchain@1.94.0
       - uses: taiki-e/install-action@just
       - uses: Swatinem/rust-cache@v2
 
@@ -144,7 +145,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Powerset (kompilyatsiya)
-        run: cargo hack check --feature-powerset --all-targets
+        # `--group-features` justfile bilan bir xil: har sqlx liniyasi bitta guruh,
+        # aks holda powerset keraksiz kattalashadi.
+        run: |
+          cargo hack check --feature-powerset --all-targets \
+            --group-features sqlx-0_8,sqlx-0_8-postgres \
+            --group-features sqlx-0_9,sqlx-0_9-postgres,sqlx,sqlx-postgres
 
       - name: Har feature alohida (test + doctest)
         run: cargo hack test --each-feature
@@ -160,7 +166,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Ma'lum zaifliklar
-        run: cargo audit
+        # RUSTSEC-2023-0071 (`rsa`) sqlx 0.8 ning IXTIYORIY MySQL drayveridan
+        # Cargo.lock ga tushadi; `cargo audit` feature'larni ko'rmaydi, `rsa` esa
+        # hech qanday feature/target'da build graf'iga kirmaydi. Avval shuni
+        # tasdiqlaymiz — graf'ga qaytsa, job yiqiladi. `justfile: audit` bilan bir xil.
+        run: |
+          if cargo tree --target all -i rsa --all-features 2>/dev/null | grep -q '^rsa '; then
+            echo "xato: 'rsa' build graf'ida — RUSTSEC-2023-0071 ni qayta baholang" >&2
+            exit 1
+          fi
+          cargo audit --ignore RUSTSEC-2023-0071
 
       - name: Ishlatilmagan dependency'lar
         run: cargo machete --with-metadata
