@@ -8,7 +8,30 @@ Breaking o'zgarishlar ⚠️ bilan belgilanadi va reliz oxirida migratsiya jadva
 
 ## [Unreleased]
 
-_Hozircha bo'sh._
+Nashr qilinadigan API o'zgarmadi — bu yozuv faqat hujjatlar va repo ichidagi
+asboblar haqida. `docs/` `Cargo.toml` dagi `include` ro'yxatida yo'q, ya'ni
+crates.io paketiga kirmaydi.
+
+### Qo'shildi
+
+- `just ai-check` va `just ai-setup` — Codex / Claude / Graphify lokal
+  environment'ini tekshirish va sozlash. Global config'larni faqat `ai-setup`
+  o'zgartiradi (explicit target). Repo ichidagi asbob, crate API'siga taalluqli emas.
+
+### Hujjatlashtirildi
+
+- **`docs/architecture.md`** — loyihaning arxitektura reference'i. 10 bo'lim:
+  repo xaritasi (fayl × mas'uliyat × public tiplar × feature gate), qatlamlar grafi,
+  public API indeksi (string tiplar, `BirthDate`, `Id`/`NumId`, sir tiplari, xatolar),
+  uch ma'lumot oqimi (`parse`, serde, sqlx `Decode`), ikki qatlamli validatsiyaning
+  **tip bo'yicha** taqsimoti (`parse()` da nima, `parse_strict()` da nima), feature
+  grafi va MSRV ikkita poli, kengaytirish retseptlari (yangi tip / feature / xato),
+  invariantlar × ularni qulflaydigan testlar jadvali, `justfile` ↔ CI parity va
+  hujjatlar xaritasi.
+- `CLAUDE.md` va `AGENTS.md` dagi **§ Arxitektura 85 → 25 qatorga qisqardi**: endi u
+  faqat qaytarilmaydigan qarorlarni sanaydi va batafsili uchun `docs/architecture.md`
+  ga havola qiladi. Bir xil ma'lumot ikki joyda saqlanmaydi — drift xavfi yo'qoldi.
+- `.gitignore` da `/.air` qatori izohli bo'limga ko'chirildi (mazmun o'zgarmadi).
 
 ---
 
