@@ -76,11 +76,5 @@
     "seen": 1788679416.078997,
     "ast_hash": "bb575da37de65c3a22449158e5d6327d",
     "semantic_hash": "bb575da37de65c3a22449158e5d6327d"
-  },
-  "graphify-out/memory/query_20260906_073300_09ebd60e_explain_the_architecture_of_this_project.md": {
-    "mtime": 1788679980.72023,
-    "seen": 1788685017.704233,
-    "ast_hash": "387f7f7155f90901535329f22b270719",
-    "semantic_hash": "387f7f7155f90901535329f22b270719"
   }
 }
