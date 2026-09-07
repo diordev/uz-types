@@ -1,1 +1,12 @@
-{"0": "Id Trait Derives", "1": "NumId Codec & Parsing", "2": "BirthDate Value Type", "3": "EmailAddress Validation", "4": "Pinfl Parsing & Checksum", "5": "Id/NumId Generics Core", "6": "PhoneNumber Validation", "7": "Passport Value Type", "8": "Id Ordering & Version", "9": "Prelude Module"}
+{
+  "0": "NumId<Tag, R>",
+  "1": "Self",
+  "2": "BirthDate",
+  "3": "EmailAddress",
+  "4": "Pinfl",
+  "5": "String",
+  "6": "PhoneNumber",
+  "7": "passport.rs",
+  "8": "Q: Bu loyihaning arxitekturasini qisqacha tushuntir",
+  "9": "prelude.rs"
+}

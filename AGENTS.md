@@ -51,88 +51,29 @@ Justfile `RUSTFLAGS=-D warnings` eksport qiladi (CI bilan parity uchun) — `jus
 
 ## Arxitektura
 
-### Barcha `String`-asosli tiplar bitta makrodan chiqadi
+To'liq xarita — [`docs/architecture.md`](docs/architecture.md): modul-fayl jadvali, public API
+indeksi, feature grafi, parse/serde/sqlx oqimlari, kengaytirish retseptlari va invariantlar
+jadvali. Arxitektura savoli tug'ilsa **avval o'sha faylni** o'qing.
 
-`src/macros.rs` dagi `string_newtype!` — `Passport`, `Pinfl`, `PhoneNumber`, `EmailAddress`
-uchun **yagona** boilerplate manbai: derive `Debug`/`Clone`/`PartialEq`/`Eq`/`Hash`/`PartialOrd`/`Ord`,
-`parse`/`as_str`/`into_inner`, `TryFrom<String>`, `TryFrom<&str>`, `FromStr`, `From<Self> for String`,
-`Display`, `AsRef<str>`, `Borrow<str>`, `serde`, `sqlx` (`sqlx_via!` orqali).
+Quyida faqat qaytarilmaydigan qarorlar — buzilmasligi kerak bo'lgan invariantlar:
 
-Yangi string tip qo'shish = makroni chaqirish + **ikkita** funksiya yozish:
-
-```rust,ignore
-string_newtype! {
-    /// Doc-comment majburiy (`#![warn(missing_docs)]`).
-    pub struct Inn;
-    error = InnError;              // har tip o'zining aniq xatosini qaytaradi
-    expecting = "a 9-digit INN";   // serde deserializatsiya xato xabari
-}
-```
-
-- `fn normalize(s: &mut String)` — uzunlik o'zgarsa; `&mut str` — o'zgarmasa (faqat case);
-- `fn validate(s: &str) -> Result<(), Error>` — **normalizatsiya qilingandan keyingi** matn ustida.
-
-Tartib qat'iy: `trim_in_place` → `normalize` → `validate`. Trim'ni makro bajaradi, takrorlamang.
-
-Allocation intizomi: `TryFrom<String>` yo'li hech qachon qo'shimcha allocation qilmaydi (`trim_in_place`
-memmove + truncate; `normalize` in-place). Bu da'vo `benches/parse.rs` va `try_from_string_reuses_buffer`
-uslubidagi unit testlar bilan qulflangan — buzmang.
-
-`src/secret.rs` dagi `secret_newtype!` — parallel, lekin **ataylab kambag'al** makro.
-**Yo'q:** `Display`, `AsRef`, `Borrow`, `into_inner`, derive `PartialEq`/`Hash`/`Ord`,
-default `Serialize`. **Bor:** `expose_secret()`, `Debug` da `[REDACTED]`, `subtle` orqali
-constant-time `PartialEq`, `zeroize` feature'da `Drop`. Sir tipiga oddiy trait qo'shishdan
-oldin nega yo'qligini o'ylang.
-
-### Ikki qatlamli validatsiya — asosiy dizayn qarori
-
-| Qatlam | Nima | Qayerda |
-| --- | --- | --- |
-| **Struktura** (hech qachon o'zgarmaydi) | uzunlik, belgilar, prefiks, kalendar sanasi | `parse()` |
-| **Registry / biznes** (vaqt bilan o'zgaradi) | operator kodi ro'yxatda bormi, PINFL checksum | `is_*()`, `parse_strict()` |
-
-O'zgaruvchan faktni (`MOBILE_CODES`, checksum, jins/asr) **hech qachon** `parse()` ichiga
-ko'chirmang: DB va Kafka'dagi eski yozuvlar o'qilmay qoladi. Qoida: DB/event → `parse()`,
-foydalanuvchi kiritgan ma'lumot → `parse_strict()`.
-
-### `Id<Tag>` / `NumId<Tag, R>` — crate nom bermaydi
-
-Crate faqat mexanizmni beradi; `OrderId`, `SessionId` kabi nomlarni iste'molchi o'zi e'lon qiladi
-(tayyor alias'lar 0.20.0-0.21.0 da ataylab olib tashlangan — CHANGELOG ga qarang). Bu qaror
-qaytarilmasin.
-
-`PhantomData<fn() -> Tag>` (`PhantomData<Tag>` emas) — `Send + Sync + Unpin` va kovariantlik uchun.
-`Tag` ga bog'liq bo'lmagan trait'lar qo'lda impl qilinadi, derive ishlatilmaydi (derive `Tag: Clone`
-talab qilardi).
-
-`NumIdRepr` — **sealed** trait, faqat `u64` (default) va `i64`. `u64` da `Encode`/`Decode` xato
-berishi mumkin (`BIGINT` ga sig'maslik, DB'da manfiy qiymat) — ya'ni **query paytida**; shuning
-uchun `try_new_db_safe`/`parse_db_safe` xatoni konstruksiya paytiga ko'chiradi. `i64` da bu yo'l umuman yo'q.
-
-Konversiya sirti uchala oilada bir xil (0.21.0 dan): `Id<Tag>`, `NumId<Tag, R>` va string tiplari
-`FromStr` + `TryFrom<&str>` + `TryFrom<String>` + `From<Self> for String` beradi. Ya'ni
-`T: TryFrom<String>` bound'i ostidagi generic kod uchalasi bilan ham ishlaydi — buzmang.
-
-### Feature'lar va integratsiyalar
-
-`date` va `id` — default. `serde`, `sqlx`, `sqlx-postgres`, `zeroize`, `serialize-secrets` — opsional.
-Feature nomlari 1.0 gacha qulflangan.
-
-- **serde** (`src/serde_support.rs`): barcha string tiplar uchun bitta `Visitor`.
-  `visit_str` → `FromStr`, `visit_string` → `TryFrom<String>` (deserializer bufferini qayta ishlatadi).
-  Smart constructor chetlab o'tilmaydi — noto'g'ri JSON `Err` beradi.
-- **sqlx** (`src/sqlx_support.rs`): `sqlx_via!` makrosi — `string_newtype!` uni avtomatik chaqiradi,
-  `id.rs` va `birth_date.rs` esa qo'lda (`Id`, `NumId`, `BirthDate`).
-  Driver'ga bog'liq emas (`DB: Database`); `PgHasArrayType` faqat `sqlx-postgres` da.
-  `Decode` **har doim validatsiyadan o'tadi** (`#[sqlx(transparent)]` derive'dan farqli) —
-  DB'dagi buzuq yozuv `try_get` da xato beradi.
-  Jonli DB testi yo'q; `tests/sqlx_bounds.rs` trait'lar borligini compile-time'da qulflaydi.
-
-### README = doctest
-
-`src/lib.rs` README ni crate doc sifatida `include_str!` qiladi, lekin faqat `date` **va** `id`
-yoqilganda (README kod bloklari o'sha tiplarni ishlatadi). README dagi har bir `rust` kod bloki —
-ishlaydigan doctest. README ni tahrirlagach `cargo test --all-features --doc` ishlating.
+- **Barcha `String`-asosli tiplar `string_newtype!` dan chiqadi** (`src/macros.rs`). Yangi tip =
+  makro chaqiruvi + `normalize` + `validate`; boilerplate'ni qo'lda takrorlamang.
+- **Tartib qat'iy: `trim_in_place` → `normalize` → `validate`.** Trim'ni makro bajaradi.
+- **`TryFrom<String>` yo'li qo'shimcha allocation qilmaydi** — `benches/parse.rs` va
+  `try_from_string_reuses_buffer` uslubidagi unit testlar bilan qulflangan.
+- **O'zgaruvchan faktni `parse()` ichiga ko'chirmang** (`MOBILE_CODES`, checksum, jins/asr): DB va
+  Kafka'dagi eski yozuvlar o'qilmay qoladi. DB/event → `parse()`, foydalanuvchi → `parse_strict()`.
+- **Crate ID uchun domen nomi bermaydi** — `OrderId`, `SessionId` iste'molchida. Tayyor alias'lar
+  0.20.0–0.21.0 da ataylab olib tashlangan (CHANGELOG); bu qaror qaytarilmasin.
+- **`NumIdRepr` sealed** — faqat `u64` va `i64`. `PhantomData<fn() -> Tag>`, `PhantomData<Tag>` emas.
+- **Konversiya sirti uchala oilada bir xil** — `FromStr` + `TryFrom<&str>` + `TryFrom<String>` +
+  `From<Self> for String`. `T: TryFrom<String>` ostidagi generic kod uchalasida ishlashi shart.
+- **`secret_newtype!` ataylab kambag'al** — `Display`, `AsRef`, `Borrow`, `into_inner`, derive
+  `PartialEq`/`Hash`/`Ord`, default `Serialize` va sqlx yo'q. Sir tipiga trait qo'shishdan oldin
+  nega yo'qligini o'ylang.
+- **README = doctest** — `src/lib.rs` uni `include_str!` qiladi (`date` + `id` ostida). README ni
+  tahrirlagach `cargo test --all-features --doc`.
 
 ## Konvensiyalar
 
@@ -144,7 +85,8 @@ ishlaydigan doctest. README ni tahrirlagach `cargo test --all-features --doc` is
 - Public konstantalar slice yoki `RangeInclusive` (`MOBILE_CODES`, `REGIONAL_CODES`) — element
   qo'shish breaking bo'lmasin.
 - Yangi public tip qo'shganda tekshiring: `lib.rs` (`mod` + `pub use` + feature gate),
-  `prelude.rs`, `TypeError`, `tests/props.rs`, `tests/sqlx_bounds.rs`.
+  `prelude.rs`, `TypeError`, `tests/props.rs`, `tests/sqlx_bounds.rs`. To'liq ro'yxat:
+  [`docs/architecture.md` § 7](docs/architecture.md#7-kengaytirish-retseptlari).
 - Unit testlar modul ichida (`#[cfg(test)] mod tests`), integration `tests/` da. `tests/props.rs`
   ikki invariantni qulflaydi: hech qanday input panic qilmaydi, `parse` idempotent.
 
