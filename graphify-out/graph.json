@@ -1970,7 +1970,7 @@
       "file_type": "code",
       "norm_label": "birth_date_at_is_deterministic()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L204"
+      "source_location": "L205"
     },
     {
       "id": "src_pinfl_birth_date_is_extracted",
@@ -1981,7 +1981,7 @@
       "file_type": "code",
       "norm_label": "birth_date_is_extracted()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L197"
+      "source_location": "L198"
     },
     {
       "id": "src_pinfl_gender",
@@ -1992,7 +1992,7 @@
       "file_type": "code",
       "norm_label": "gender",
       "source_file": "src/pinfl.rs",
-      "source_location": "L16"
+      "source_location": "L17"
     },
     {
       "id": "src_pinfl_official_examples_pass_strict",
@@ -2003,7 +2003,7 @@
       "file_type": "code",
       "norm_label": "official_examples_pass_strict()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L164"
+      "source_location": "L165"
     },
     {
       "id": "src_pinfl_pinfl",
@@ -2014,7 +2014,7 @@
       "file_type": "code",
       "norm_label": "pinfl",
       "source_file": "src/pinfl.rs",
-      "source_location": "L23"
+      "source_location": "L24"
     },
     {
       "id": "src_pinfl_pinfl_birth_date",
@@ -2025,7 +2025,7 @@
       "file_type": "code",
       "norm_label": ".birth_date()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L121"
+      "source_location": "L122"
     },
     {
       "id": "src_pinfl_pinfl_birth_date_at",
@@ -2036,7 +2036,7 @@
       "file_type": "code",
       "norm_label": ".birth_date_at()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L130"
+      "source_location": "L131"
     },
     {
       "id": "src_pinfl_pinfl_birth_date_parts",
@@ -2047,7 +2047,7 @@
       "file_type": "code",
       "norm_label": ".birth_date_parts()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L92"
+      "source_location": "L93"
     },
     {
       "id": "src_pinfl_pinfl_century",
@@ -2058,7 +2058,7 @@
       "file_type": "code",
       "norm_label": ".century()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L80"
+      "source_location": "L81"
     },
     {
       "id": "src_pinfl_pinfl_digit",
@@ -2069,7 +2069,7 @@
       "file_type": "code",
       "norm_label": ".digit()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L55"
+      "source_location": "L56"
     },
     {
       "id": "src_pinfl_pinfl_gender",
@@ -2080,7 +2080,7 @@
       "file_type": "code",
       "norm_label": ".gender()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L70"
+      "source_location": "L71"
     },
     {
       "id": "src_pinfl_pinfl_is_checksum_valid",
@@ -2091,7 +2091,7 @@
       "file_type": "code",
       "norm_label": ".is_checksum_valid()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L61"
+      "source_location": "L62"
     },
     {
       "id": "src_pinfl_pinfl_normalize",
@@ -2102,7 +2102,7 @@
       "file_type": "code",
       "norm_label": ".normalize()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L30"
+      "source_location": "L31"
     },
     {
       "id": "src_pinfl_pinfl_parse_strict",
@@ -2113,7 +2113,7 @@
       "file_type": "code",
       "norm_label": ".parse_strict()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L43"
+      "source_location": "L44"
     },
     {
       "id": "src_pinfl_pinfl_region_code",
@@ -2124,7 +2124,7 @@
       "file_type": "code",
       "norm_label": ".region_code()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L103"
+      "source_location": "L104"
     },
     {
       "id": "src_pinfl_pinfl_serial",
@@ -2135,7 +2135,7 @@
       "file_type": "code",
       "norm_label": ".serial()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L110"
+      "source_location": "L111"
     },
     {
       "id": "src_pinfl_pinfl_validate",
@@ -2146,7 +2146,7 @@
       "file_type": "code",
       "norm_label": ".validate()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L32"
+      "source_location": "L33"
     },
     {
       "id": "src_pinfl_pinflerror",
@@ -2157,7 +2157,7 @@
       "file_type": "code",
       "norm_label": "pinflerror",
       "source_file": "src/pinfl.rs",
-      "source_location": "L140"
+      "source_location": "L141"
     },
     {
       "id": "src_pinfl_rs_option",
@@ -2201,7 +2201,7 @@
       "file_type": "code",
       "norm_label": "structural_parse_is_lenient_strict_is_not()",
       "source_file": "src/pinfl.rs",
-      "source_location": "L183"
+      "source_location": "L184"
     },
     {
       "id": "phantomdata",
@@ -3685,7 +3685,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L166",
+      "source_location": "L167",
       "weight": 1.0
     },
     {
@@ -3697,7 +3697,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L122",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -3709,7 +3709,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L131",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -3721,7 +3721,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L93",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -3733,7 +3733,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -3745,7 +3745,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L81",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -3757,7 +3757,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L71",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -3769,7 +3769,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L63",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -3781,7 +3781,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -3793,7 +3793,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L48",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -3805,7 +3805,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pinfl.rs",
-      "source_location": "L48",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -5233,7 +5233,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/pinfl.rs",
-      "source_location": "L121",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -5245,7 +5245,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/pinfl.rs",
-      "source_location": "L130",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -5257,7 +5257,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/pinfl.rs",
-      "source_location": "L70",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -5269,7 +5269,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/pinfl.rs",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -5281,7 +5281,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/pinfl.rs",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -5293,7 +5293,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/pinfl.rs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -6073,7 +6073,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/pinfl.rs",
-      "source_location": "L130",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -6973,7 +6973,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/pinfl.rs",
-      "source_location": "L121",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -6985,7 +6985,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/pinfl.rs",
-      "source_location": "L130",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -6997,7 +6997,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/pinfl.rs",
-      "source_location": "L92",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -7009,7 +7009,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/pinfl.rs",
-      "source_location": "L80",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -7021,7 +7021,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/pinfl.rs",
-      "source_location": "L70",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -7033,7 +7033,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/pinfl.rs",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -7045,7 +7045,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/pinfl.rs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -7421,18 +7421,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L140",
-      "weight": 1.0
-    },
-    {
-      "source": "src_pinfl",
-      "target": "src_pinfl_gender",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/pinfl.rs",
-      "source_location": "L16",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -7443,7 +7432,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L164",
+      "source_location": "L165",
+      "weight": 1.0
+    },
+    {
+      "source": "src_pinfl",
+      "target": "src_pinfl_gender",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/pinfl.rs",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -7454,7 +7454,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L183",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -7465,7 +7465,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L197",
+      "source_location": "L198",
       "weight": 1.0
     },
     {
@@ -7476,7 +7476,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L204",
+      "source_location": "L205",
       "weight": 1.0
     },
     {
@@ -9269,7 +9269,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L103",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -9280,7 +9280,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L110",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -9291,7 +9291,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L121",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -9302,7 +9302,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L130",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -9313,7 +9313,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -9324,7 +9324,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -9335,7 +9335,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -9346,7 +9346,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -9357,7 +9357,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -9368,7 +9368,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L70",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -9379,7 +9379,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L80",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -9390,7 +9390,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pinfl.rs",
-      "source_location": "L92",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -9624,5 +9624,5 @@
       "source_file": "graphify-out/memory/query_20260906_073300_09ebd60e_explain_the_architecture_of_this_project.md"
     }
   ],
-  "built_at_commit": "eef38c788ed8bced1d8deb7c3d0760a9c7c83770"
+  "built_at_commit": "142c5ebdecfc5420a8245505fa0dd853b575e147"
 }

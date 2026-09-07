@@ -10,6 +10,10 @@ Rust loyihalari (ayniqsa O'zbekiston domeniga oid backend tizimlar) uchun qat'iy
 
 Oddiy `String` o'rniga `Passport`, `Pinfl`, `PhoneNumber` kabi tiplardan foydalanasiz — qiymat tipga **faqat validatsiyadan o'tib** kiradi, keyin esa u bilan ishlash xavfsiz.
 
+Bu README — kutubxonani **qanday ishlatish** bo'yicha foydalanuvchi qo'llanmasi.
+Ichkarida u **qanday va nega ishlashi**, dizayn qarorlari hamda maintainer
+retseptlari uchun [`docs/architecture.md`](docs/architecture.md) ga qarang.
+
 ```rust
 use uz_types::prelude::*;
 
@@ -68,14 +72,14 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 
 ```toml
 [dependencies]
-uz-types = "0.21"
+uz-types = "0.22"
 ```
 
 Yoki kerakli feature'lar bilan:
 
 ```toml
 [dependencies]
-uz-types = { version = "0.21", features = ["serde", "sqlx-postgres"] }
+uz-types = { version = "0.22", features = ["serde", "sqlx-postgres"] }
 ```
 
 | Feature             | Default | Nima yoqadi                                                                    | Qo'shimcha dependency |
@@ -91,7 +95,7 @@ uz-types = { version = "0.21", features = ["serde", "sqlx-postgres"] }
 **Qoida:** tiplar default'da bor, integratsiyalar — siz tanlaysiz. Faqat `Passport` kerak bo'lgan servis `chrono`/`uuid` ni ham xohlamasa:
 
 ```toml
-uz-types = { version = "0.21", default-features = false }
+uz-types = { version = "0.22", default-features = false }
 ```
 
 ---
@@ -460,7 +464,11 @@ fn register(passport: &str, phone: &str) -> Result<(), TypeError> {
 assert!(matches!(register("AA123", "998901234567"), Err(TypeError::Passport(PassportError::Length))));
 ```
 
-Barcha error tiplari `std::error::Error`, `Copy`, `Eq` va `#[non_exhaustive]`; `TypeError` variantlari `#[error(transparent)]` — xabar ichki xatonikidir.
+Modulga xos leaf error tiplari (`PassportError`, `PinflError` va boshqalar)
+`std::error::Error`, `Copy`, `Eq` va `#[non_exhaustive]`. Ularni yig'uvchi
+`TypeError` ham `std::error::Error`, `Clone`, `Eq` va `#[non_exhaustive]`, ammo
+`Copy` emas; uning variantlari `#[error(transparent)]`, ya'ni xabar ichki
+xatonikidir.
 
 ---
 
@@ -602,7 +610,18 @@ just ci             # TO'LIQ (~80s): check + example + features + msrv + package
 Justfile `RUSTFLAGS=-D warnings` ni CI bilan bir xil qilib eksport qiladi — shuning
 uchun `just test` va oddiy `cargo test` orasida almashganda qayta build bo'ladi.
 
-Testlar: unit (modul ichida) + integration (`tests/serde.rs`, `tests/sqlx_bounds.rs`) + property-based (`tests/props.rs`: hech qanday input panic qilmaydi, `parse` idempotent). `tests/sqlx_bounds.rs` sqlx trait'lari **compile-time**'da mavjudligini qulflaydi — jonli DB talab qilinmaydi va Postgres integration testi hozircha yo'q.
+Testlar: unit (modul ichida) + integration (`tests/serde.rs`, `tests/sqlx_bounds.rs`,
+`tests/compile_fail.rs`) + property-based. `tests/props.rs` to'rtta `string_newtype!`
+tipini `\\PC{0,64}` generatorida panic qilmaslik va muvaffaqiyatli `parse`ning
+idempotentligi bo'yicha tekshiradi. `tests/sqlx_bounds.rs` SQLx trait'larini
+**compile-time**'da qulflaydi — jonli DB talab qilinmaydi va Postgres integration
+testi hozircha yo'q.
+
+README `src/lib.rs` orqali crate hujjatiga `date` va `id` feature'lari yoqilganda
+qo'shiladi. `cargo test --all-features --doc` oddiy `rust` bloklarini bajaradi va
+`rust,compile_fail` blokining kompilyatsiya bo'lmasligini tekshiradi. SQLx bo'limidagi
+`rust,ignore` blok esa pool va iste'molchi tiplari kontekstini ko'rsatadigan namuna:
+u doctest sifatida kompilyatsiya qilinmaydi.
 
 ---
 

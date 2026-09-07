@@ -8,30 +8,84 @@ Breaking o'zgarishlar ⚠️ bilan belgilanadi va reliz oxirida migratsiya jadva
 
 ## [Unreleased]
 
-Nashr qilinadigan API o'zgarmadi — bu yozuv faqat hujjatlar va repo ichidagi
-asboblar haqida. `docs/` `Cargo.toml` dagi `include` ro'yxatida yo'q, ya'ni
-crates.io paketiga kirmaydi.
+## [0.22.0] — 2026-09-07
+
+Bu reliz public enumlar uchun loyiha invariantini tiklaydi: `Gender` endi
+`#[non_exhaustive]`. Variantlar, parsing va `Pinfl::gender()` semantikasi
+o'zgarmadi, ammo downstream crate'dagi to'liq `match` ifodalariga wildcard kerak.
 
 ### Qo'shildi
 
+- `trybuild` compile-fail testlari: downstream kod `Gender` ni wildcard'siz
+  `match` qila olmasligini, uchala sir tipi `Display` bermasligini va
+  `serialize-secrets` o'chiq bo'lsa `Serialize` bermasligini qulflaydi.
 - `just ai-check` va `just ai-setup` — Codex / Claude / Graphify lokal
   environment'ini tekshirish va sozlash. Global config'larni faqat `ai-setup`
   o'zgartiradi (explicit target). Repo ichidagi asbob, crate API'siga taalluqli emas.
 
+### ⚠️ Breaking
+
+- `Gender` ga `#[non_exhaustive]` qo'shildi. Kutubxonadan tashqaridagi exhaustive
+  `match` endi kompilyatsiya bo'lmaydi; kelajakdagi variantlar uchun `_` tarmog'ini
+  qo'shing.
+
+### O'zgardi
+
+- `docs/architecture.md` 10 bo'limli ikki-darajali qo'llanmaga aylantirildi:
+  dastlabki qatlam arxitekturani oddiy tilda tushuntiradi, keyingi qatlam esa
+  maintainer uchun texnik shartlar, kengaytirish retseptlari va haqiqiy test
+  qamrovini saqlaydi. Parse oilalari, serde/SQLx feature chegaralari, sirlar,
+  `BirthDate`, MSRV va lokal/CI farqlari kodga mos ravishda aniqlashtirildi.
+- README o'rnatish misollari 0.22 ga ko'tarildi va hujjatlar vazifasi ajratildi:
+  README — foydalanish, `docs/architecture.md` — ichki ishlash va dizayn qarorlari.
+
+### Tuzatildi
+
+- `just semver` va `just semver-detail` baseline tekshiruvida `RUSTFLAGS=""`
+  ishlatadi; lokal recipe'lar shu jihatdan CI bilan moslashdi.
+- README endi faqat modulga xos leaf xatolar `Copy` ekanini, yig'uvchi `TypeError`
+  esa `Copy` emasligini aniq aytadi. Oddiy Rust, `compile_fail` va SQLx'dagi
+  `rust,ignore` bloklarining doctest qamrovi ham alohida tushuntirildi.
+
 ### Hujjatlashtirildi
 
-- **`docs/architecture.md`** — loyihaning arxitektura reference'i. 10 bo'lim:
-  repo xaritasi (fayl × mas'uliyat × public tiplar × feature gate), qatlamlar grafi,
-  public API indeksi (string tiplar, `BirthDate`, `Id`/`NumId`, sir tiplari, xatolar),
-  uch ma'lumot oqimi (`parse`, serde, sqlx `Decode`), ikki qatlamli validatsiyaning
-  **tip bo'yicha** taqsimoti (`parse()` da nima, `parse_strict()` da nima), feature
-  grafi va MSRV ikkita poli, kengaytirish retseptlari (yangi tip / feature / xato),
-  invariantlar × ularni qulflaydigan testlar jadvali, `justfile` ↔ CI parity va
-  hujjatlar xaritasi.
 - `CLAUDE.md` va `AGENTS.md` dagi **§ Arxitektura 85 → 25 qatorga qisqardi**: endi u
   faqat qaytarilmaydigan qarorlarni sanaydi va batafsili uchun `docs/architecture.md`
   ga havola qiladi. Bir xil ma'lumot ikki joyda saqlanmaydi — drift xavfi yo'qoldi.
 - `.gitignore` da `/.air` qatori izohli bo'limga ko'chirildi (mazmun o'zgarmadi).
+
+### Migratsiya 0.21 → 0.22
+
+| 0.21 | 0.22 |
+| --- | --- |
+| Downstream kod `Gender::{Male, Female}` ni wildcard'siz to'liq `match` qilishi mumkin edi. | `Gender` `#[non_exhaustive]`; `_ => ...` tarmog'i majburiy. |
+
+Oldin:
+
+```rust
+use uz_types::Gender;
+
+fn gender_label(gender: Gender) -> &'static str {
+    match gender {
+        Gender::Male => "erkak",
+        Gender::Female => "ayol",
+    }
+}
+```
+
+Keyin:
+
+```rust
+use uz_types::Gender;
+
+fn gender_label(gender: Gender) -> &'static str {
+    match gender {
+        Gender::Male => "erkak",
+        Gender::Female => "ayol",
+        _ => "noma'lum",
+    }
+}
+```
 
 ---
 
@@ -511,7 +565,6 @@ Bu versiyalar uchun o'zgarishlar hujjatlashtirilmagan — git tarixiga qarang.
 
 **1.0 gacha**: Postgres integration testlari CI'da (`#[sqlx::test]`) — hozircha
 sqlx impl'lari faqat compile-time tekshiriladi, jonli DB'da sinalmagan;
-`trybuild` compile-fail testlar (sir tiplari `Display`/`Serialize` bermasligini qulflash);
 `deny.toml` (litsenziya/manba siyosati).
 
 **1.0.0**: `cargo semver-checks` kamida bitta minor reliz davomida yashil bo'lgandan va 0.18/0.19
@@ -520,7 +573,8 @@ real servisda ishlatilgandan keyin. Feature nomlari va public API qulflanadi.
 **1.0 dan keyin** (yangi tiplar, crate'ga kirmaydi): `Inn`/`Stir`, `BankCard` (Luhn), `Mfo`,
 `AccountNumber`; `PhoneNumber::parse_local()` (9 raqamli mahalliy shakl).
 
-[Unreleased]: https://github.com/diordev/uz-types/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/diordev/uz-types/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/diordev/uz-types/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/diordev/uz-types/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/diordev/uz-types/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/diordev/uz-types/compare/v0.18.0...v0.19.0

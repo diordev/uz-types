@@ -13,6 +13,7 @@ string_newtype! {
 
 /// PINFL 1-raqamidan olinadigan jins.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Gender {
     /// Erkak (1-raqam toq: 1, 3, 5).
     Male,

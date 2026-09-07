@@ -82,12 +82,12 @@ audit:
 # Tanlangan versiya bump'i o'zgarishlarni qoplaydimi (crates.io baseline bilan)
 semver:
     @command -v cargo-semver-checks >/dev/null || { echo "kerak: cargo install cargo-semver-checks"; exit 1; }
-    cargo semver-checks check-release
+    RUSTFLAGS="" cargo semver-checks check-release
 
 # Versiya bump'i lint'larni yashirmaydi; CHANGELOG yozishdan oldin ishlating.
 # Aynan NIMA breaking ekanini ko'rsatadi
 semver-detail:
-    cargo semver-checks check-release --all-features --release-type patch
+    RUSTFLAGS="" cargo semver-checks check-release --all-features --release-type patch
 
 # MSRV pollari. Talab: rustup toolchain install 1.85.0 1.94.0
 msrv:
