@@ -46,7 +46,7 @@ check: fmt-check lint test doc-check
 
 # DB service talab qilmaydigan CI suite — push'dan oldin (~80s warm).
 # Jonli PostgreSQL job alohida `postgres-test` orqali ishlaydi.
-ci: check example features msrv package audit semver
+ci: check example features msrv msrv-sqlx-08 package audit semver
 
 # Format tekshiruvi
 fmt-check:
@@ -62,7 +62,9 @@ doc-check:
 # Feature kombinatsiyalari bo'yicha check va test
 features:
     @command -v cargo-hack >/dev/null || { echo "kerak: cargo install cargo-hack"; exit 1; }
-    cargo hack check --feature-powerset --all-targets
+    cargo hack check --feature-powerset --all-targets \
+        --group-features sqlx-0_8,sqlx-0_8-postgres \
+        --group-features sqlx-0_9,sqlx-0_9-postgres,sqlx,sqlx-postgres
     cargo hack test --each-feature
 
 # `--allow-dirty`: `ci` commit'dan OLDIN ishlatiladi, `cargo package` esa toza tree
@@ -74,10 +76,22 @@ package:
     cargo package --locked --allow-dirty
 
 # CVE (cargo-audit) va ishlatilmagan dependency (cargo-machete). Tarmoq talab qiladi.
+#
+# RUSTSEC-2023-0071 (`rsa`, Marvin Attack) sqlx 0.8 ning IXTIYORIY MySQL drayveridan
+# Cargo.lock ga tushadi. `cargo audit` lockfile'ni o'qiydi va feature'larni ko'rmaydi,
+# `rsa` esa hech qanday feature yoki target'da build graf'iga kirmaydi (biz faqat
+# `postgres` drayverini yoqamiz). Advisory'ni ko'r-ko'rona bosmaslik uchun avval
+# reachability tekshiriladi: `rsa` graf'ga qaytsa, recipe yiqiladi.
 audit:
-    @command -v cargo-audit >/dev/null || { echo "kerak: cargo install cargo-audit"; exit 1; }
-    @command -v cargo-machete >/dev/null || { echo "kerak: cargo install cargo-machete"; exit 1; }
-    cargo audit
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v cargo-audit >/dev/null || { echo "kerak: cargo install cargo-audit"; exit 1; }
+    command -v cargo-machete >/dev/null || { echo "kerak: cargo install cargo-machete"; exit 1; }
+    if cargo tree --target all -i rsa --all-features 2>/dev/null | grep -q '^rsa '; then
+        echo "xato: 'rsa' build graf'ida — RUSTSEC-2023-0071 ni qayta baholang" >&2
+        exit 1
+    fi
+    cargo audit --ignore RUSTSEC-2023-0071
     cargo machete --with-metadata
 
 # Tanlangan versiya bump'i o'zgarishlarni qoplaydimi (crates.io baseline bilan)
@@ -98,10 +112,33 @@ msrv:
     cargo +1.85.0 check --features date,id,serde,zeroize,serialize-secrets
     cargo +1.94.0 check --all-targets --all-features
 
-# Jonli PostgreSQL roundtrip. Talab: Rust 1.94 va CREATE DATABASE huquqli disposable DATABASE_URL.
+# sqlx 0.8 liniyasi crate MSRV'ida (1.85) resolve bo'lishini tekshiradi.
+#
+# Committed Cargo.lock yangi toolchain bilan resolve qilingan, shuning uchun unda
+# `icu_*`/`idna_adapter` ning 1.86–1.88 talab qiladigan versiyalari turadi. Rust
+# 1.85 iste'molchisining o'z MSRV-aware resolver'i mos versiyalarni tanlaydi —
+# shu holatni takrorlash uchun lockfile vaqtincha qayta generatsiya qilinadi va
+# recipe tugagach (xato bo'lsa ham) tiklanadi.
+msrv-sqlx-08:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cp Cargo.lock Cargo.lock.msrv-bak
+    trap 'mv -f Cargo.lock.msrv-bak Cargo.lock' EXIT
+    cargo +1.85.0 generate-lockfile
+    cargo +1.85.0 check --features date,id,serde,zeroize,serialize-secrets,sqlx-0_8-postgres
+
+# Jonli PostgreSQL roundtrip, sqlx 0.9. Talab: Rust 1.94 va CREATE DATABASE huquqli
+# disposable DATABASE_URL.
 postgres-test:
     @test -n "${DATABASE_URL:-}" || { echo "xato: DATABASE_URL kerak (disposable PostgreSQL, CREATE DATABASE huquqi bilan)" >&2; exit 1; }
     cargo +1.94.0 test --all-features --test sqlx_postgres -- --ignored
+
+# Xuddi shu suite sqlx 0.8 kod yo'li ustida. Toolchain 1.94, chunki dev-dependency'lar
+# (criterion → 1.86, sqlx 0.9 dev-dep → 1.94) `cargo test` graf'iga har doim kiradi;
+# kutubxonaning o'zi 1.85 da resolve bo'lishini `msrv-sqlx-08` isbotlaydi.
+postgres-test-08:
+    @test -n "${DATABASE_URL:-}" || { echo "xato: DATABASE_URL kerak (disposable PostgreSQL, CREATE DATABASE huquqi bilan)" >&2; exit 1; }
+    cargo +1.94.0 test --no-default-features --features date,id,serde,sqlx-0_8-postgres --test sqlx_postgres_0_8 -- --ignored
 
 # ==========================================
 # RELIZ

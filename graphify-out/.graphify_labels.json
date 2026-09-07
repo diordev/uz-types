@@ -1,12 +1,13 @@
 {
-  "0": "NumId<Tag, R>",
+  "0": "Id<Tag>",
   "1": "Self",
   "2": "BirthDate",
   "3": "EmailAddress",
   "4": "Pinfl",
-  "5": "id.rs",
+  "5": "String",
   "6": "PhoneNumber",
   "7": "passport.rs",
   "8": "Q: Bu loyihaning arxitekturasini qisqacha tushuntir",
-  "9": "prelude.rs"
+  "9": "prelude.rs",
+  "10": ".cmp"
 }

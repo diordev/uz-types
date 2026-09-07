@@ -127,7 +127,7 @@ macro_rules! string_newtype {
             }
         }
 
-        #[cfg(feature = "sqlx")]
+        #[cfg(any(feature = "sqlx-0_8", feature = "sqlx-0_9"))]
         $crate::sqlx_support::sqlx_via!($Name, String, |s: String| Self::try_from(s), |this: &Self| &this.0);
     };
 }

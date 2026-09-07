@@ -73,14 +73,14 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 
 ```toml
 [dependencies]
-uz-types = "0.23"
+uz-types = "0.24"
 ```
 
 Yoki kerakli feature'lar bilan:
 
 ```toml
 [dependencies]
-uz-types = { version = "0.23", features = ["serde", "sqlx-postgres"] }
+uz-types = { version = "0.24", features = ["serde", "sqlx-postgres"] }
 ```
 
 | Feature             | Default | Nima yoqadi                                                                    | Qo'shimcha dependency |
@@ -88,15 +88,19 @@ uz-types = { version = "0.23", features = ["serde", "sqlx-postgres"] }
 | `date`              | ✅      | `BirthDate`, `DateFormat`, `Pinfl::birth_date()`                               | `chrono`              |
 | `id`                | ✅      | `Id<Tag>` (UUID), `NumId<Tag, R>` (BIGINT) — nomlarni o'zingiz berasiz        | `uuid`                |
 | `serde`             |         | `Serialize` / `Deserialize` barcha tiplar uchun (sirlar — faqat `Deserialize`) | `serde`               |
-| `sqlx`              |         | `Type` / `Encode` / `Decode` — driver'ga bog'liq emas                          | `sqlx`                |
-| `sqlx-postgres`     |         | `sqlx` + `PgHasArrayType` (`Vec<T>`, `= ANY($1)`)                              | `sqlx/postgres`       |
+| `sqlx-0_9`          |         | `Type` / `Encode` / `Decode` — driver'ga bog'liq emas (SQLx 0.9, **rustc 1.94+**) | `sqlx 0.9`          |
+| `sqlx-0_9-postgres` |         | `sqlx-0_9` + `PgHasArrayType` (`Vec<T>`, `= ANY($1)`)                          | `sqlx 0.9/postgres`   |
+| `sqlx-0_8`          |         | Xuddi shu sirt SQLx 0.8 ustida (1.94 poli yo'q — quyida MSRV bo'limiga qarang)  | `sqlx 0.8`            |
+| `sqlx-0_8-postgres` |         | `sqlx-0_8` + `PgHasArrayType`                                                  | `sqlx 0.8/postgres`   |
+| `sqlx`              |         | `sqlx-0_9` uchun alias (moslik nomi)                                           | —                     |
+| `sqlx-postgres`     |         | `sqlx-0_9-postgres` uchun alias (moslik nomi)                                  | —                     |
 | `zeroize`           |         | Sir tiplari `Drop` da xotirani nolga to'ldiradi                                | `zeroize`             |
 | `serialize-secrets` |         | Sir tiplari uchun `Serialize` (masalan, auth-servis token javobi)              | `serde`               |
 
 **Qoida:** tiplar default'da bor, integratsiyalar — siz tanlaysiz. Faqat `Passport` kerak bo'lgan servis `chrono`/`uuid` ni ham xohlamasa:
 
 ```toml
-uz-types = { version = "0.23", default-features = false }
+uz-types = { version = "0.24", default-features = false }
 ```
 
 `Pinfl::parse_strict()`ning Gregorian tekshiruvi `date` feature'iga bog'liq emas;
@@ -288,6 +292,31 @@ qilmaydi, faqat `is_*()` va `parse_strict()` natijasini o'zgartiradi.
 | Geografik PSTN | `61, 62, 65, 66, 67, 69, 70, 71, 72, 73, 74, 75, 76, 79` |
 | SIP | `55` |
 | Geografik bo'lmagan statsionar | `78` |
+
+#### O'z registringizni ishlatish
+
+Kod ajratmalari o'zgaruvchan fakt — crate snapshot'i eskirsa, `is_*()` va
+`parse_strict()` yangi kodlarni rad etadi. Ro'yxatni o'zingiz boshqarsangiz
+(config, DB yoki operator API'sidan), crate relizini kutish shart emas: struktura
+`parse()` da barqaror, siyosat esa `operator_code()` orqali sizniki bo'ladi.
+
+```rust
+use uz_types::PhoneNumber;
+
+// Ro'yxat sizniki — deploysiz yangilanadi.
+let allowed = ["90", "91", "99"];
+
+let phone = PhoneNumber::parse("998911234567").unwrap();   // struktura — crate tekshiradi
+assert!(allowed.contains(&phone.operator_code()));         // registry — siz tekshirasiz
+
+// Crate hali bilmaydigan yangi kod shu yo'l bilan bloklanmaydi.
+let fresh = PhoneNumber::parse("998001234567").unwrap();
+assert!(!fresh.is_known_operator());
+assert_eq!(fresh.operator_code(), "00");
+```
+
+Ya'ni tanlov "registry bor / yo'q" emas — **registry default**: crate ro'yxati tayyor
+javob beradi, kerak bo'lsa uni chetlab o'tasiz.
 
 ### EmailAddress
 
@@ -606,18 +635,49 @@ let passports: Vec<Passport> = vec![/* … */];
 sqlx::query("SELECT * FROM users WHERE passport = ANY($1)").bind(&passports);
 ```
 
-`sqlx-postgres` string newtype'larning ichki `String` qoidalarini massivlarga ham
+### Qaysi sqlx liniyasini tanlash
+
+Crate ikkala amaldagi SQLx minor liniyasini qo'llab-quvvatlaydi. Yagona farq —
+`Database::ArgumentBuffer` (0.8 da lifetime'li GAT, 0.9 da lifetime'siz); qolgan sirt
+(`Type`, `Encode`, `Decode`, `PgHasArrayType::array_compatible`, `Query::try_bind`)
+bir xil va ikkalasi ham jonli PostgreSQL 16 da tekshiriladi.
+
+| Servisingiz | Feature | rustc |
+| --- | --- | --- |
+| SQLx 0.9 da | `sqlx-0_9-postgres` (yoki eski nom `sqlx-postgres`) | 1.94+ (qat'iy) |
+| SQLx 0.8 da | `sqlx-0_8-postgres` | 1.85+ (lockfile'ga bog'liq — quyiga qarang) |
+
+```toml
+# SQLx 0.8 da qolgan servis — qo'lda `String`/`Uuid`/`i64` map qilish shart emas.
+uz-types = { version = "0.24", default-features = false, features = ["date", "id", "sqlx-0_8-postgres"] }
+```
+
+SQLx 0.8 o'z `rust-version`ini e'lon qilmaydi, lekin uning tranzitiv `url` → `idna` →
+`icu_*` zanjirining **eng yangi** versiyalari 1.86–1.88 talab qiladi. Cargo 1.85+ ning
+MSRV-aware resolver'i yangi lockfile yaratganda mos (eskiroq) versiyalarni o'zi
+tanlaydi, shuning uchun 1.85 da ishlaydi — buni CI `cargo generate-lockfile` bilan
+takrorlab tekshiradi. Mavjud lockfile'ingiz yangiroq toolchain bilan yaratilgan bo'lsa,
+`cargo generate-lockfile` ni 1.85 bilan qayta ishga tushiring yoki amaliy polni ~1.88
+deb hisoblang.
+
+`sqlx_0_8::Type` va `sqlx_0_9::Type` — turli crate'lardagi turli trait'lar, shuning
+uchun ikkala feature birga yoqilsa ham kompilyatsiya buziladi emas (dependency grafida
+feature unification bo'lsa ham). Ammo bu ikkita sqlx daraxtini tortadi — amalda
+bittasini tanlang.
+
+`sqlx-*-postgres` string newtype'larning ichki `String` qoidalarini massivlarga ham
 delegatsiya qiladi: `TEXT[]` va `VARCHAR[]` `Vec<Passport>` kabi decode qilinadi,
 `VARCHAR` ustunidagi `array_agg(...)` natijasi olinadi va `Vec<T>`ni
 `= ANY($1)`ga bind qilish ishlaydi. Bular PostgreSQL 16 service'ida jonli tekshiriladi:
 
 ```bash
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test-08
 ```
 
 Oddiy `cargo test --all-features` jonli testlarni kompilyatsiya qiladi, ammo ular
-`#[ignore]`; `just ci` ham DB service talab qilmaydi. GitHub CI esa alohida
-`live-postgres` jobida `just postgres-test`ni bajaradi.
+`#[ignore]`; `just ci` ham DB service talab qilmaydi. GitHub CI esa `live-postgres`
+jobini ikkala sqlx liniyasi uchun matritsa bilan bajaradi.
 
 **Migratsiya eslatmasi:** eski tizimdan kelgan DB'da `parse()` strukturasiga mos
 kelmaydigan yozuvlar (masalan, 13 raqamli PINFL) bo'lsa, ular `SELECT`da xato beradi —
@@ -632,11 +692,22 @@ isbotlamaydi.
 
 Yangilashdan oldin iste'molchi servisda quyidagilarni tekshiring:
 
-- Asosiy crate uchun `rustc >= 1.85`; `sqlx`/`sqlx-postgres` uchun `rustc >= 1.94`
-  va SQLx 0.9 ishlating.
-- `cargo tree -d` bilan SQLx 0.8 va 0.9 birga tortilmaganini tekshiring. Servis SQLx
-  0.8da qolsa, `uz-types`ning SQLx feature'ini yoqmang va DB qatlamida qo'lda
-  `String`/`Uuid`/`i64` orqali map qiling.
+- Asosiy crate uchun `rustc >= 1.85`. SQLx uchun servisingiz qaysi liniyada bo'lsa,
+  shu feature'ni tanlang: `sqlx-0_9-postgres` (rustc 1.94+ qat'iy) yoki
+  `sqlx-0_8-postgres` (1.94 poli yo'q; amaliy pol lockfile'ingizga bog'liq — MSRV
+  bo'limiga qarang). Ikkalasi ham bir xil trait sirtini beradi va bir xil jonli
+  PostgreSQL suite'idan o'tadi.
+- `cargo tree -d` bilan bitta sqlx liniyasi tortilganini tasdiqlang. Ikkala feature
+  yoqilgan bo'lsa build buzilmaydi, lekin ikkita sqlx daraxti kiradi — odatda bu
+  kutilmagan holat.
+- **`sqlx-0_8` bilan `cargo audit` RUSTSEC-2023-0071 (`rsa`, Marvin Attack) ni
+  ko'rsatadi.** `rsa` sqlx 0.8 ning ixtiyoriy MySQL drayveridan `Cargo.lock` ga
+  tushadi; `cargo audit` lockfile'ni o'qiydi va feature'larni ko'rmaydi. Biz faqat
+  `postgres` drayverini yoqamiz, shuning uchun `rsa` hech qanday feature yoki
+  target'da kompilyatsiya qilinmaydi — buni `cargo tree --target all -i rsa
+  --all-features` bilan o'zingiz tasdiqlang (natija bo'sh bo'lishi kerak) va
+  shundan keyingina audit siyosatingizda e'tiborsiz qoldiring. sqlx 0.9 da bu
+  yozuv yo'q.
 - Yangilangan `Cargo.lock`ni commit qiling; deploydan oldin legacy jadvallar va eventlarda
   strukturaviy invalid qiymat, `NULL`, `TEXT[]`/`VARCHAR[]` hamda ID chegaralarini audit qiling.
 - Email normalizatsiyasi local-partni ham lowercase qiladi: unique indeks yoki merge oldidan
@@ -672,10 +743,13 @@ Yangilashdan oldin iste'molchi servisda quyidagilarni tekshiring:
 ## MSRV va semver
 
 - **MSRV: Rust 1.85** (edition 2024). MSRV ko'tarilishi _minor_ reliz hisoblanadi.
-- **`sqlx` va `sqlx-postgres` feature'lari Rust 1.94+ talab qiladi** (`sqlx 0.9` ning o'z MSRV'i). Cargo per-feature MSRV'ni qo'llab-quvvatlamaydi, shuning uchun `Cargo.toml` dagi `rust-version` eng past umumiy qiymat — 1.85. CI ikkala polni alohida tekshiradi.
+- **`sqlx-0_9` / `sqlx-0_9-postgres` (va ularning `sqlx` / `sqlx-postgres` aliaslari) Rust 1.94+ talab qiladi** — bu `sqlx 0.9` ning o'z MSRV'i, undan qutulib bo'lmaydi.
+- **`sqlx-0_8` / `sqlx-0_8-postgres` da 1.94 poli yo'q.** SQLx 0.8 `rust-version` e'lon qilmaydi; amaliy pol tranzitiv `icu_*`/`idna_adapter` dan keladi. MSRV-aware resolve bilan 1.85, committed eng yangi versiyalar bilan ~1.88.
+- Cargo per-feature MSRV'ni qo'llab-quvvatlamaydi, shuning uchun `Cargo.toml` dagi `rust-version` eng past umumiy qiymat — 1.85. CI uchta polni alohida tekshiradi: 1.85 sqlx'siz, 1.85 + sqlx 0.8 (qayta resolve bilan), 1.94 + barcha feature.
 - MSRV kutubxona iste'molchisi uchun `cargo check` bilan o'lchanadi: dev-dependency'lar
-  (`criterion` → 1.86, jonli SQLx test vositalari → 1.94) downstreamga kirmaydi.
-  `cargo bench` uchun 1.86+, `postgres-test` uchun 1.94+ kerak.
+  (`criterion` → 1.86, sqlx 0.9 dev-dep → 1.94) downstreamga kirmaydi. Shu sabab
+  repo ichidagi `cargo test` (jumladan `postgres-test-08`) 1.94 talab qiladi —
+  bu kutubxona iste'molchisiga taalluqli emas. `cargo bench` uchun 1.86+ kerak.
 - Barcha public enum'lar `#[non_exhaustive]` — `match` da `_` tarmog'ini qoldiring.
 - Public konstantalar slice/`RangeInclusive` — yangi kod qo'shilishi breaking emas.
 - Feature nomlari 1.0 gacha qulflangan: `date`, `id`, `serde`, `sqlx`, `sqlx-postgres`, `zeroize`, `serialize-secrets`.
@@ -691,10 +765,11 @@ Talab: [`just`](https://just.systems), `cargo-hack`, `cargo-audit`, `cargo-mache
 just check          # TEZ (~3s): fmt + clippy + test + rustdoc — commit'dan oldin
 just ci             # DB-SIZ (~80s): check + example + features + msrv + package + audit + semver
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test-08
 ```
 
 `just ci` — PostgreSQL service talab qilmaydigan CI suite'i; `publish-check` unga
-tayanadi. Jonli DB qatlami CI'da va lokal ishda alohida `postgres-test`. Alohida qismlar:
+tayanadi. Jonli DB qatlami CI'da va lokal ishda alohida `postgres-test*`. Alohida qismlar:
 
 | Recipe | Nima qiladi |
 | ---------------- | ----------------------------------------------------------------------------- |
@@ -704,7 +779,9 @@ tayanadi. Jonli DB qatlami CI'da va lokal ishda alohida `postgres-test`. Alohida
 | `just semver-detail` | aynan **nima** breaking ekanini ko'rsatadi — CHANGELOG yozishdan oldin     |
 | `just audit`     | `cargo audit` (CVE) + `cargo machete` (ishlatilmagan dep) — tarmoq kerak       |
 | `just bench`     | criterion benchmark (`benches/parse.rs`) — Rust 1.86+ kerak                    |
-| `just postgres-test` | PostgreSQL 16 da scalar, NULL, massiv va xato roundtrip'lari — Rust 1.94   |
+| `just postgres-test` | PostgreSQL 16 da scalar, NULL, massiv va xato roundtrip'lari (sqlx 0.9) — Rust 1.94 |
+| `just postgres-test-08` | Xuddi shu suite sqlx 0.8 kod yo'li ustida (toolchain 1.94 — dev-dep'lar) |
+| `just msrv-sqlx-08` | sqlx 0.8 ning Rust 1.85 da resolve bo'lishi — lockfile qayta yaratiladi va tiklanadi |
 
 `just check` warm cache bilan tez; birinchi dependency yuklanishi tarmoq talab qilishi mumkin.
 `audit` va `semver` `ci` da turadi.
@@ -712,12 +789,17 @@ Justfile `RUSTFLAGS=-D warnings` ni CI bilan bir xil qilib eksport qiladi — sh
 uchun `just test` va oddiy `cargo test` orasida almashganda qayta build bo'ladi.
 
 Testlar: unit (modul ichida) + integration (`tests/serde.rs`, `tests/sqlx_bounds.rs`,
-`tests/sqlx_postgres.rs`, `tests/pinfl_dataset.rs`, `tests/compile_fail.rs`) + property-based.
+`tests/sqlx_postgres.rs` va `tests/sqlx_postgres_0_8.rs` — tanasi
+`tests/common/postgres_suite.rs` da, `tests/sqlx_version_parity.rs`,
+`tests/pinfl_dataset.rs`, `tests/compile_fail.rs`) + property-based.
 `tests/props.rs` to'rtta `string_newtype!`
 tipini `\\PC{0,64}` generatorida panic qilmaslik va muvaffaqiyatli `parse`ning
 idempotentligi bo'yicha tekshiradi. `tests/sqlx_bounds.rs` SQLx trait'larini
-DB-siz qulflaydi; ignored `tests/sqlx_postgres.rs` esa `just postgres-test` orqali
-PostgreSQL 16da haqiqiy encode/decode/query yo'llarini tekshiradi.
+DB-siz qulflaydi va buni har ikkala sqlx liniyasi uchun alohida modulda qiladi;
+`tests/sqlx_version_parity.rs` ikkala liniya bir xil tip nomi va compatibility
+natijasini berishini isbotlaydi; ignored jonli suite esa `just postgres-test` /
+`just postgres-test-08` orqali PostgreSQL 16da haqiqiy encode/decode/query
+yo'llarini tekshiradi.
 
 README `src/lib.rs` orqali crate hujjatiga `date` va `id` feature'lari yoqilganda
 qo'shiladi. `cargo test --all-features --doc` oddiy `rust` bloklarini bajaradi va

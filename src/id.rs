@@ -218,7 +218,7 @@ impl<'de, Tag> serde::Deserialize<'de> for Id<Tag> {
     }
 }
 
-#[cfg(feature = "sqlx")]
+#[cfg(any(feature = "sqlx-0_8", feature = "sqlx-0_9"))]
 crate::sqlx_support::sqlx_via!(
     Id<Tag> [Tag],
     Uuid,
@@ -532,59 +532,111 @@ impl<'de, Tag, R: NumIdRepr> serde::Deserialize<'de> for NumId<Tag, R> {
 /// `NumId<Tag, i64>` da `Encode`/`Decode` **total** — xato yo'li yo'q.
 /// `NumId<Tag, u64>` da esa [`IdError::NumberTooLarge`] (Encode) va
 /// [`IdError::NumberNegative`] (Decode) bo'lishi mumkin — bu xatolar strukturali,
-/// bevosita `Encode` yoki SQLx 0.9 `Query::try_bind()` qaytargan `BoxDynError` ichida
+/// bevosita `Encode` yoki SQLx `Query::try_bind()` qaytargan `BoxDynError` ichida
 /// `downcast_ref::<IdError>()` bilan ushlanadi. Oddiy `Query::bind()` encode sababini
 /// matnga aylantiradi va execution paytida faqat tashqi `sqlx::Error::Encode` qoladi;
 /// aniq xatoni oldin olish uchun [`NumId::try_new_db_safe`] ham ishlatilishi mumkin.
-#[cfg(feature = "sqlx")]
+#[cfg(any(feature = "sqlx-0_8", feature = "sqlx-0_9"))]
 mod sqlx_impls {
     use super::{NumId, NumIdRepr};
 
-    impl<DB: sqlx::Database, Tag, R: NumIdRepr> sqlx::Type<DB> for NumId<Tag, R>
-    where
-        i64: sqlx::Type<DB>,
-    {
-        fn type_info() -> DB::TypeInfo {
-            <i64 as sqlx::Type<DB>>::type_info()
-        }
-        fn compatible(ty: &DB::TypeInfo) -> bool {
-            <i64 as sqlx::Type<DB>>::compatible(ty)
-        }
+    /// `Type` + `Decode` — ikkala sqlx liniyasida bir xil.
+    macro_rules! num_id_type_decode {
+        ($sqlx:ident) => {
+            impl<DB: ::$sqlx::Database, Tag, R: NumIdRepr> ::$sqlx::Type<DB> for NumId<Tag, R>
+            where
+                i64: ::$sqlx::Type<DB>,
+            {
+                fn type_info() -> DB::TypeInfo {
+                    <i64 as ::$sqlx::Type<DB>>::type_info()
+                }
+                fn compatible(ty: &DB::TypeInfo) -> bool {
+                    <i64 as ::$sqlx::Type<DB>>::compatible(ty)
+                }
+            }
+
+            impl<'r, DB: ::$sqlx::Database, Tag, R: NumIdRepr> ::$sqlx::Decode<'r, DB>
+                for NumId<Tag, R>
+            where
+                i64: ::$sqlx::Decode<'r, DB>,
+            {
+                fn decode(value: DB::ValueRef<'r>) -> Result<Self, ::$sqlx::error::BoxDynError> {
+                    let raw = <i64 as ::$sqlx::Decode<'r, DB>>::decode(value)?;
+                    Ok(Self::new(R::from_bigint(raw)?))
+                }
+            }
+        };
     }
 
-    impl<'q, DB: sqlx::Database, Tag, R: NumIdRepr> sqlx::Encode<'q, DB> for NumId<Tag, R>
-    where
-        i64: sqlx::Encode<'q, DB>,
-    {
-        fn encode_by_ref(
-            &self,
-            buf: &mut DB::ArgumentBuffer,
-        ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
-            let value = self.0.to_bigint()?;
-            <i64 as sqlx::Encode<'q, DB>>::encode_by_ref(&value, buf)
-        }
+    /// `Encode` — sqlx 0.8 da `ArgumentBuffer` lifetime'li GAT.
+    #[cfg(feature = "sqlx-0_8")]
+    macro_rules! num_id_encode_0_8 {
+        ($sqlx:ident) => {
+            impl<'q, DB: ::$sqlx::Database, Tag, R: NumIdRepr> ::$sqlx::Encode<'q, DB>
+                for NumId<Tag, R>
+            where
+                i64: ::$sqlx::Encode<'q, DB>,
+            {
+                fn encode_by_ref(
+                    &self,
+                    buf: &mut DB::ArgumentBuffer<'q>,
+                ) -> Result<::$sqlx::encode::IsNull, ::$sqlx::error::BoxDynError> {
+                    let value = self.0.to_bigint()?;
+                    <i64 as ::$sqlx::Encode<'q, DB>>::encode_by_ref(&value, buf)
+                }
+            }
+        };
     }
 
-    impl<'r, DB: sqlx::Database, Tag, R: NumIdRepr> sqlx::Decode<'r, DB> for NumId<Tag, R>
-    where
-        i64: sqlx::Decode<'r, DB>,
-    {
-        fn decode(value: DB::ValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-            let raw = <i64 as sqlx::Decode<'r, DB>>::decode(value)?;
-            Ok(Self::new(R::from_bigint(raw)?))
-        }
+    /// `Encode` — sqlx 0.9 da `ArgumentBuffer` lifetime'siz.
+    #[cfg(feature = "sqlx-0_9")]
+    macro_rules! num_id_encode_0_9 {
+        ($sqlx:ident) => {
+            impl<'q, DB: ::$sqlx::Database, Tag, R: NumIdRepr> ::$sqlx::Encode<'q, DB>
+                for NumId<Tag, R>
+            where
+                i64: ::$sqlx::Encode<'q, DB>,
+            {
+                fn encode_by_ref(
+                    &self,
+                    buf: &mut DB::ArgumentBuffer,
+                ) -> Result<::$sqlx::encode::IsNull, ::$sqlx::error::BoxDynError> {
+                    let value = self.0.to_bigint()?;
+                    <i64 as ::$sqlx::Encode<'q, DB>>::encode_by_ref(&value, buf)
+                }
+            }
+        };
     }
 
-    #[cfg(feature = "sqlx-postgres")]
-    impl<Tag, R: NumIdRepr> sqlx::postgres::PgHasArrayType for NumId<Tag, R> {
-        fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-            <i64 as sqlx::postgres::PgHasArrayType>::array_type_info()
-        }
+    /// `Vec<NumId<..>>` uchun `BIGINT[]`; `array_compatible` `i64`ga delegatsiya qilinadi.
+    #[cfg(any(feature = "sqlx-0_8-postgres", feature = "sqlx-0_9-postgres"))]
+    macro_rules! num_id_pg_array {
+        ($sqlx:ident) => {
+            impl<Tag, R: NumIdRepr> ::$sqlx::postgres::PgHasArrayType for NumId<Tag, R> {
+                fn array_type_info() -> ::$sqlx::postgres::PgTypeInfo {
+                    <i64 as ::$sqlx::postgres::PgHasArrayType>::array_type_info()
+                }
 
-        fn array_compatible(ty: &sqlx::postgres::PgTypeInfo) -> bool {
-            <i64 as sqlx::postgres::PgHasArrayType>::array_compatible(ty)
-        }
+                fn array_compatible(ty: &::$sqlx::postgres::PgTypeInfo) -> bool {
+                    <i64 as ::$sqlx::postgres::PgHasArrayType>::array_compatible(ty)
+                }
+            }
+        };
     }
+
+    #[cfg(feature = "sqlx-0_8")]
+    num_id_type_decode!(sqlx_0_8);
+    #[cfg(feature = "sqlx-0_8")]
+    num_id_encode_0_8!(sqlx_0_8);
+    #[cfg(feature = "sqlx-0_8-postgres")]
+    num_id_pg_array!(sqlx_0_8);
+
+    #[cfg(feature = "sqlx-0_9")]
+    num_id_type_decode!(sqlx_0_9);
+    #[cfg(feature = "sqlx-0_9")]
+    num_id_encode_0_9!(sqlx_0_9);
+    #[cfg(feature = "sqlx-0_9-postgres")]
+    num_id_pg_array!(sqlx_0_9);
 }
 
 #[cfg(test)]

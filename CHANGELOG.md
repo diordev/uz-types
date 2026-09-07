@@ -8,6 +8,53 @@ Breaking o'zgarishlar ⚠️ bilan belgilanadi va reliz oxirida migratsiya jadva
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-09-07
+
+SQLx integratsiyasi endi ikkala amaldagi minor liniyada ishlaydi. Shu bilan `sqlx`
+feature'i uchun majburiy bo'lgan `rustc 1.94` poli olib tashlandi: SQLx 0.8 da qolgan
+servis `uz-types`ni qo'lda `String`/`Uuid`/`i64` map qilmasdan ishlatadi. Public tip,
+metod, xato va feature nomlari o'zgarmadi — o'zgarish sof additive.
+
+SQLx 0.8 o'z `rust-version`ini e'lon qilmaydi; amaliy pol uning tranzitiv
+`url`→`idna`→`icu_*` zanjiridan keladi — MSRV-aware lockfile bilan 1.85, eng yangi
+versiyalar bilan ~1.88. Batafsil: README § MSRV va semver.
+
+### Qo'shildi
+
+- `sqlx-0_8`, `sqlx-0_8-postgres`, `sqlx-0_9`, `sqlx-0_9-postgres` feature'lari.
+  `sqlx` va `sqlx-postgres` — 0.9 liniyasi uchun moslik aliaslari; mavjud
+  `Cargo.toml`larni o'zgartirish shart emas.
+- `tests/sqlx_version_parity.rs` — ikkala liniya bir xil PostgreSQL tip nomi va
+  `compatible`/`array_compatible` natijasini berishini qulflaydi.
+- `just postgres-test-08` — xuddi shu jonli PostgreSQL 16 suite'i sqlx 0.8 kod yo'li
+  ustida; CI'dagi `live-postgres` jobi endi ikkala liniya bo'yicha matritsa.
+- `just msrv-sqlx-08` — sqlx 0.8 ning Rust 1.85 da resolve bo'lishini lockfile'ni
+  vaqtincha qayta yaratib tekshiradi (`trap` bilan tiklanadi); `just ci` ga qo'shildi
+  va CI `msrv` jobida ham bor.
+
+### O'zgardi
+
+- `sqlx_via!` va `NumId` ning SQLx implementatsiyasi versiyaga parametrlandi. Ikki
+  liniya orasidagi yagona farq — `Database::ArgumentBuffer` (0.8 da lifetime'li GAT);
+  qolgan sirt bir xil.
+- Jonli PostgreSQL suite tanasi `tests/common/postgres_suite.rs` ga ko'chirildi va
+  `tests/sqlx_postgres.rs` (0.9) hamda `tests/sqlx_postgres_0_8.rs` (0.8) uni
+  `include!` qiladi.
+
+### Hujjatlashtirildi
+
+- `PhoneNumber::operator_code()` — crate registridan chiqish yo'li sifatida
+  hujjatlandi va misol bilan berildi: joriy kod ro'yxati config/DB'dan kelsa,
+  `is_*()` o'rniga shu accessor ishlatiladi va crate relizini kutish shart emas.
+  `is_known_operator()` va `parse_strict()` javobi crate snapshot'iga nisbatan ekani
+  aniq aytildi.
+- README'da qaysi sqlx liniyasini tanlash jadvali, ikkala feature birga yoqilishi
+  nega xato emasligi (turli crate — turli trait) va yangilangan MSRV matritsasi.
+- `sqlx-0_8` yoqilganda `cargo audit` RUSTSEC-2023-0071 (`rsa`) ni ko'rsatishi va
+  nega bu build graf'iga kirmasligi hujjatlandi. `just audit` advisory'ni faqat
+  reachability tekshiruvidan keyin e'tiborsiz qoldiradi: `rsa` graf'ga qaytsa,
+  recipe yiqiladi.
+
 ## [0.23.0] — 2026-09-07
 
 Bu reliz production qo'llash uchun isbotlangan domen va SQLx nuqsonlarini yopadi:
@@ -643,7 +690,8 @@ real servisda ishlatilgandan keyin. Feature nomlari va public API qulflanadi.
 **1.0 dan keyin** (yangi tiplar, crate'ga kirmaydi): `Inn`/`Stir`, `BankCard` (Luhn), `Mfo`,
 `AccountNumber`; `PhoneNumber::parse_local()` (9 raqamli mahalliy shakl).
 
-[Unreleased]: https://github.com/diordev/uz-types/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/diordev/uz-types/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/diordev/uz-types/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/diordev/uz-types/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/diordev/uz-types/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/diordev/uz-types/compare/v0.20.0...v0.21.0

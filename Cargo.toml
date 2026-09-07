@@ -1,6 +1,6 @@
 [package]
 name = "uz-types"
-version = "0.23.0"
+version = "0.24.0"
 authors = ["Diyorbek Abdumutalibov <diordev@icloud.com>"]
 license = "MIT OR Apache-2.0"
 description = "Rust loyihalar uchun qayta ishlatiladigan type, value object va domain model'lar kutubxonasi."
@@ -11,9 +11,10 @@ keywords = ["types", "value-object", "domain-model", "validation", "uzbekistan"]
 categories = ["data-structures", "rust-patterns"]
 
 edition = "2024"
-# Edition 2024 chegarasi. `sqlx` feature'i alohida 1.94+ talab qiladi (sqlx 0.9),
-# lekin u optional — cargo per-feature MSRV'ni qo'llab-quvvatlamaydi, shuning uchun
-# bu yerda eng past umumiy qiymat turadi. Qarang: README § MSRV va semver.
+# Edition 2024 chegarasi. `sqlx-0_9` feature'i alohida 1.94+ talab qiladi (sqlx 0.9 ning
+# o'z MSRV'i); `sqlx-0_8` esa shu yerdagi 1.85 bilan ishlaydi. Cargo per-feature MSRV'ni
+# qo'llab-quvvatlamaydi, shuning uchun bu yerda eng past umumiy qiymat turadi.
+# Qarang: README § MSRV va semver.
 rust-version = "1.85"
 
 include = [
@@ -30,13 +31,23 @@ include = [
 
 [features]
 default = ["date", "id"]
-date = ["dep:chrono", "sqlx?/chrono"]
-id = ["dep:uuid", "sqlx?/uuid"]
+date = ["dep:chrono", "sqlx-0_8?/chrono", "sqlx-0_9?/chrono"]
+id = ["dep:uuid", "sqlx-0_8?/uuid", "sqlx-0_9?/uuid"]
 serde = ["dep:serde", "uuid?/serde"]
-sqlx = ["dep:sqlx"]
-sqlx-postgres = ["sqlx", "sqlx/postgres"]
 zeroize = ["dep:zeroize"]
 serialize-secrets = ["serde"]
+
+# SQLx ikki minor liniyada qo'llab-quvvatlanadi. `sqlx_0_8::Type` va `sqlx_0_9::Type`
+# turli crate'lardagi turli trait'lar, shuning uchun ikkalasini birga yoqish ham
+# kompilyatsiya bo'ladi — lekin odatda bittasini tanlang.
+sqlx-0_9 = ["dep:sqlx-0_9"]
+sqlx-0_9-postgres = ["sqlx-0_9", "sqlx-0_9/postgres"]
+sqlx-0_8 = ["dep:sqlx-0_8"]
+sqlx-0_8-postgres = ["sqlx-0_8", "sqlx-0_8/postgres"]
+
+# Moslik aliaslari — 0.23.0 va undan oldingi nomlar eng yangi liniyaga ishora qiladi.
+sqlx = ["sqlx-0_9"]
+sqlx-postgres = ["sqlx-0_9-postgres"]
 
 [dependencies]
 thiserror = "2"
@@ -44,7 +55,8 @@ subtle = { version = "2.6", default-features = false }
 chrono = { version = "0.4", optional = true, default-features = false, features = ["std", "clock"] }
 uuid = { version = "1.26", optional = true, default-features = false, features = ["std", "v4", "v7"] }
 serde = { version = "1", optional = true, default-features = false, features = ["std"] }
-sqlx = { version = "0.9", optional = true, default-features = false }
+sqlx-0_9 = { package = "sqlx", version = "0.9", optional = true, default-features = false }
+sqlx-0_8 = { package = "sqlx", version = "0.8", optional = true, default-features = false }
 zeroize = { version = "1", optional = true, default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
@@ -52,7 +64,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 proptest = "1"
 trybuild = "1"
-sqlx = { version = "0.9", default-features = false, features = ["macros", "migrate", "runtime-tokio"] }
+sqlx-0_9 = { package = "sqlx", version = "0.9", default-features = false, features = ["macros", "migrate", "runtime-tokio"] }
+sqlx-0_8 = { package = "sqlx", version = "0.8", default-features = false, features = ["macros", "migrate", "runtime-tokio"] }
 
 [package.metadata.docs.rs]
 all-features = true

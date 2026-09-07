@@ -89,6 +89,10 @@ impl PhoneNumber {
     }
 
     /// Struktura + mobil/geografik/SIP/statsionar kod exact ro'yxatda bo'lishi shart.
+    ///
+    /// Ro'yxat crate bilan birga keladi va eskirishi mumkin. DB/Kafka/Serde replay
+    /// uchun [`parse`](Self::parse) ni, o'z registringiz bo'lsa
+    /// [`operator_code`](Self::operator_code) ni ishlating.
     pub fn parse_strict(value: &str) -> Result<Self, PhoneNumberError> {
         let phone = Self::parse(value)?;
         if !phone.is_known_operator() {
@@ -98,6 +102,26 @@ impl PhoneNumber {
     }
 
     /// Kod (`90`, `71`) — xom, ro'yxatga qaramasdan.
+    ///
+    /// Bu crate registridan chiqish yo'li: kod ajratmalari vaqt bilan o'zgaradi va
+    /// crate snapshot'i eskirishi mumkin. Joriy ro'yxat sizga config yoki DB'dan
+    /// kelsa, `is_*()` metodlarini emas, shu accessor'ni ishlating — `parse()`
+    /// strukturasi barqaror qoladi, siyosat esa sizniki bo'ladi:
+    ///
+    /// ```
+    /// use uz_types::PhoneNumber;
+    ///
+    /// // Ro'yxat sizniki: config, DB yoki remote'dan keladi.
+    /// let allowed = ["90", "91", "99"];
+    ///
+    /// let phone = PhoneNumber::parse("998911234567").unwrap();
+    /// assert!(allowed.contains(&phone.operator_code()));
+    ///
+    /// // Crate registri hali bilmaydigan yangi kod ham shu yo'l bilan o'tadi.
+    /// let fresh = PhoneNumber::parse("998001234567").unwrap();
+    /// assert!(!fresh.is_known_operator());
+    /// assert_eq!(fresh.operator_code(), "00");
+    /// ```
     #[inline]
     #[must_use]
     pub fn operator_code(&self) -> &str {
@@ -141,6 +165,12 @@ impl PhoneNumber {
     }
 
     /// Kod crate'dagi aniq mobil, geografik, SIP yoki statsionar ro'yxatda bormi.
+    ///
+    /// Bu **crate snapshot'iga** nisbatan javob, mutlaq haqiqat emas. Yangi kod
+    /// ajratilsa, crate yangilanmaguncha bu metod `false` qaytaradi va
+    /// [`parse_strict`](Self::parse_strict) rad etadi — [`parse`](Self::parse) esa
+    /// ta'sirlanmaydi. Registrni o'zingiz boshqarmoqchi bo'lsangiz
+    /// [`operator_code`](Self::operator_code) misoliga qarang.
     #[must_use]
     pub fn is_known_operator(&self) -> bool {
         self.is_mobile() || self.is_geographic() || self.is_sip() || self.is_non_geographic_fixed()

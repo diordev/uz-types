@@ -1,16 +1,16 @@
 # Graph Report - uz-types  (2026-09-07)
 
 ## Corpus Check
-- 15 files · ~7,248 words
+- 16 files · ~8,045 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 252 nodes · 581 edges · 10 communities
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.8)
+- 266 nodes · 608 edges · 10 communities
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 7 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `142c5ebd`
+- Built from commit: `6071d9a2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,13 +20,13 @@
 - BirthDate
 - EmailAddress
 - Pinfl
-- String
+- id.rs
 - PhoneNumber
 - passport.rs
 - Q: Bu loyihaning arxitekturasini qisqacha tushuntir
 
 ## God Nodes (most connected - your core abstractions)
-1. `NumId<Tag, R>` - 40 edges
+1. `NumId<Tag, R>` - 41 edges
 2. `Id<Tag>` - 36 edges
 3. `BirthDate` - 31 edges
 4. `IdError` - 19 edges
@@ -60,11 +60,11 @@
 
 ### Community 0 - "NumId<Tag, R>"
 Cohesion: 0.06
-Nodes (31): Clone, Copy, DB, Debug, Decode, Encode, Eq, H (+23 more)
+Nodes (30): Clone, Copy, DB, Debug, Decode, Encode, Eq, H (+22 more)
 
 ### Community 1 - "Self"
-Cohesion: 0.12
-Nodes (14): ArgumentBuffer, BoxDynError, IsNull, db_safe_bounds_move_the_error_to_construction(), IdError, numid_conversions_match_the_rest_of_the_crate(), D, Error (+6 more)
+Cohesion: 0.14
+Nodes (13): ArgumentBuffer, BoxDynError, IsNull, db_safe_bounds_move_the_error_to_construction(), IdError, numid_conversions_match_the_rest_of_the_crate(), D, Error (+5 more)
 
 ### Community 2 - "BirthDate"
 Cohesion: 0.11
@@ -75,16 +75,16 @@ Cohesion: 0.09
 Nodes (18): Explain the architecture of this project (graphify query), email domain validation check, EmailAddress, EmailAddressError, email local-part validation check, Result, TypeError, trim_in_place() (+10 more)
 
 ### Community 4 - "Pinfl"
-Cohesion: 0.16
-Nodes (7): Gender, official_examples_pass_strict(), Pinfl, PinflError, Option, Result, Self
+Cohesion: 0.11
+Nodes (11): is_leap_year(), is_valid_gregorian_date(), Gender, official_examples_pass_strict(), Pinfl, PinflError, Option, Result (+3 more)
 
-### Community 5 - "String"
-Cohesion: 0.28
-Nodes (14): PhantomData, R, i64, Id, NumId, NumId<Tag, i64>, NumId<Tag, u64>, From (+6 more)
+### Community 5 - "id.rs"
+Cohesion: 0.21
+Nodes (16): PhantomData, R, i64, Id, NumId, NumId<Tag, i64>, NumId<Tag, u64>, Order (+8 more)
 
 ### Community 6 - "PhoneNumber"
-Cohesion: 0.19
-Nodes (4): PhoneNumber, PhoneNumberError, Result, Self
+Cohesion: 0.16
+Nodes (7): exact_code_sets_are_classified(), PhoneNumber, PhoneNumberError, Result, Self, unassigned_codes_are_only_structurally_valid(), with_code()
 
 ### Community 7 - "passport.rs"
 Cohesion: 0.17
@@ -102,7 +102,7 @@ Nodes (3): Answer, Q: Bu loyihaning arxitekturasini qisqacha tushuntir, Source N
 
 ## Knowledge Gaps
 - **7 isolated node(s):** `Order`, `Answer`, `Source Nodes`, `email domain validation check`, `email local-part validation check` (+2 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 65 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 66 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -111,13 +111,13 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **What is the exact relationship between `EmailAddress` and `email local-part validation check`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
-- **Why does `String` connect `String` to `NumId<Tag, R>`, `Self`, `BirthDate`, `EmailAddress`, `PhoneNumber`, `passport.rs`?**
-  _High betweenness centrality (0.299) - this node is a cross-community bridge._
-- **Why does `BirthDate` connect `BirthDate` to `Pinfl`, `String`?**
-  _High betweenness centrality (0.251) - this node is a cross-community bridge._
-- **Why does `NumId<Tag, R>` connect `NumId<Tag, R>` to `Self`, `String`?**
-  _High betweenness centrality (0.234) - this node is a cross-community bridge._
+- **Why does `String` connect `id.rs` to `NumId<Tag, R>`, `Self`, `BirthDate`, `EmailAddress`, `Pinfl`, `PhoneNumber`, `passport.rs`?**
+  _High betweenness centrality (0.351) - this node is a cross-community bridge._
+- **Why does `BirthDate` connect `BirthDate` to `Pinfl`, `id.rs`?**
+  _High betweenness centrality (0.258) - this node is a cross-community bridge._
+- **Why does `NumId<Tag, R>` connect `NumId<Tag, R>` to `Self`, `id.rs`?**
+  _High betweenness centrality (0.233) - this node is a cross-community bridge._
 - **What connects `Order`, `Answer`, `Source Nodes` to the rest of the system?**
   _7 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `NumId<Tag, R>` be split into smaller, more focused modules?**
-  _Cohesion score 0.05576441102756892 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05584415584415584 - nodes in this community are weakly interconnected._

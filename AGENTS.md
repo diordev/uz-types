@@ -31,10 +31,12 @@ Talab: [`just`](https://just.systems). Qo'shimcha: `cargo-hack`, `cargo-audit`, 
 just check   # TEZ (~3s warm): fmt-check + clippy + test + doc-check — commit'dan oldin
 just ci      # DB-SIZ (~80s): check + example + features + msrv + package + audit + semver — push'dan oldin
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres just postgres-test-08
 ```
 
-`just ci` — PostgreSQL service talab qilmaydigan CI suite'i. Jonli DB tekshiruvi alohida
-`postgres-test`; uning `DATABASE_URL`i CREATE DATABASE huquqli disposable instansga qarashi kerak.
+`just ci` — PostgreSQL service talab qilmaydigan CI suite'i. Jonli DB tekshiruvi alohida:
+`postgres-test` (sqlx 0.9) va `postgres-test-08` (sqlx 0.8) — ikkalasi Rust 1.94da; ularning
+`DATABASE_URL`i CREATE DATABASE huquqli disposable instansga qarashi kerak.
 Alohida: `just fmt`, `just lint`, `just test`, `just features`, `just msrv`,
 `just semver-detail`, `just bench`, `just doc`, `just tree`.
 
@@ -88,7 +90,8 @@ Quyida faqat qaytarilmaydigan qarorlar — buzilmasligi kerak bo'lgan invariantl
   qo'shsangiz `TypeError` ga variant qo'shing.
 - Telefonning exact public registrlari slice (`MOBILE_CODES`, `GEOGRAPHIC_CODES`, `SIP_CODES`,
   `NON_GEOGRAPHIC_FIXED_CODES`); `REGIONAL_CODES` deprecated compatibility oralig'i. Element
-  qo'shish breaking bo'lmasin.
+  qo'shish breaking bo'lmasin. Registry eskirishi mumkin — iste'molchi uchun chiqish yo'li
+  `operator_code()`; buni olib tashlamang va hujjatdan o'chirmang.
 - Yangi public tip qo'shganda tekshiring: `lib.rs` (`mod` + `pub use` + feature gate),
   `prelude.rs`, `TypeError`, `tests/props.rs`, `tests/sqlx_bounds.rs`. To'liq ro'yxat:
   [`docs/architecture.md` § 7](docs/architecture.md#7-kengaytirish-retseptlari).
@@ -97,10 +100,14 @@ Quyida faqat qaytarilmaydigan qarorlar — buzilmasligi kerak bo'lgan invariantl
 
 ### MSRV — ikkita pol
 
-`rust-version = "1.85"` (edition 2024) — bu iste'molchi uchun. `sqlx` feature'i **1.94+** talab qiladi
-(sqlx 0.9), lekin cargo per-feature MSRV'ni bilmaydi, shuning uchun manifestda eng past umumiy qiymat
-turadi va CI ikkala polni alohida job'da tekshiradi. 1.85 MSRV `cargo check` bilan, `--all-targets`siz
-o'lchanadi: dev-dep'lar (criterion → 1.86, jonli SQLx test vositalari → 1.94) downstreamga kirmaydi.
+`rust-version = "1.85"` (edition 2024) — bu iste'molchi uchun. `sqlx-0_9` feature'i **1.94+** talab
+qiladi (sqlx 0.9 ning o'z MSRV'i). `sqlx-0_8` da 1.94 poli yo'q, ammo uning tranzitiv
+`url`→`idna`→`icu_*` zanjiri eng yangi versiyalarda 1.86–1.88 talab qiladi; MSRV-aware resolve
+bilan 1.85 da ishlaydi — shuni `just msrv-sqlx-08` (lockfile qayta yaratiladi va `trap` bilan
+tiklanadi) qulflaydi. Cargo per-feature MSRV'ni bilmaydi, shuning uchun manifestda eng past
+umumiy qiymat turadi. 1.85 MSRV `cargo check` bilan, `--all-targets`siz o'lchanadi: dev-dep'lar
+(criterion → 1.86, sqlx 0.9 dev-dep → 1.94) downstreamga kirmaydi — shu sabab repo ichidagi
+`cargo test` (jumladan `postgres-test-08`) 1.94 talab qiladi.
 
 ### Reliz
 

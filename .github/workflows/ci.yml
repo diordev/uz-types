@@ -68,8 +68,18 @@ jobs:
       - name: sqlx'siz barcha feature'lar
         run: cargo check --features date,id,serde,zeroize,serialize-secrets
 
+      # sqlx 0.8 o'z MSRV'ini e'lon qilmaydi, ammo uning tranzitiv `url`/`idna`/`icu_*`
+      # zanjiri committed lockfile'da 1.86–1.88 talab qiladigan versiyalarda turadi.
+      # Rust 1.85 iste'molchisining o'z MSRV-aware resolver'i mos versiyalarni tanlaydi;
+      # shu holatni takrorlash uchun lockfile qayta generatsiya qilinadi (CI ish daraxti
+      # bir martalik, shuning uchun tiklash shart emas).
+      - name: sqlx 0.8 bilan (MSRV-aware resolve)
+        run: |
+          cargo generate-lockfile
+          cargo check --features date,id,serde,zeroize,serialize-secrets,sqlx-0_8-postgres
+
   msrv-sqlx:
-    name: MSRV (1.94, sqlx bilan)
+    name: MSRV (1.94, sqlx 0.9 bilan)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -82,8 +92,21 @@ jobs:
         run: cargo check --all-targets --all-features
 
   live-postgres:
-    name: PostgreSQL 16 roundtrip
+    name: PostgreSQL 16 roundtrip (sqlx ${{ matrix.sqlx }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Ikkala qator ham 1.94: `cargo test` dev-dependency'larni (criterion → 1.86,
+          # sqlx 0.9 dev-dep → 1.94) har doim resolve qiladi. Kutubxonaning o'zi
+          # 1.85 da sqlx 0.8 bilan resolve bo'lishini `msrv` jobi qulflaydi.
+          - sqlx: "0.8"
+            toolchain: "1.94.0"
+            recipe: postgres-test-08
+          - sqlx: "0.9"
+            toolchain: "1.94.0"
+            recipe: postgres-test
     services:
       postgres:
         image: postgres:16-alpine
@@ -102,12 +125,12 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.94.0
+      - uses: dtolnay/rust-toolchain@${{ matrix.toolchain }}
       - uses: taiki-e/install-action@just
       - uses: Swatinem/rust-cache@v2
 
       - name: Jonli PostgreSQL testlari
-        run: just postgres-test
+        run: just ${{ matrix.recipe }}
 
   # `--all-features` bitta nuqta — feature kombinatsiyalari alohida tekshiriladi.
   # Ro'yxat Cargo.toml dan olinadi, qo'lda yozilmaydi.

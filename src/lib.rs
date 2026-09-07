@@ -17,7 +17,9 @@
 //! - `date` (default) — `BirthDate`, `DateFormat` (`chrono`);
 //! - `id` (default) — `Id<Tag>`, `NumId<Tag>` (`uuid`);
 //! - `serde` — `Serialize`/`Deserialize`;
-//! - `sqlx`, `sqlx-postgres` — `Type`/`Encode`/`Decode` (+ `PgHasArrayType`);
+//! - `sqlx-0_9`, `sqlx-0_9-postgres` — `Type`/`Encode`/`Decode` (+ `PgHasArrayType`),
+//!   SQLx 0.9 ustida; `sqlx` va `sqlx-postgres` — ularning moslik aliaslari;
+//! - `sqlx-0_8`, `sqlx-0_8-postgres` — xuddi shu sirt SQLx 0.8 ustida;
 //! - `zeroize` — sir tiplari `Drop` da xotirani tozalaydi;
 //! - `serialize-secrets` — sir tiplari uchun `Serialize`.
 
@@ -26,7 +28,7 @@ mod macros;
 
 #[cfg(feature = "serde")]
 mod serde_support;
-#[cfg(feature = "sqlx")]
+#[cfg(any(feature = "sqlx-0_8", feature = "sqlx-0_9"))]
 mod sqlx_support;
 
 mod email;

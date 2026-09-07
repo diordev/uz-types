@@ -281,7 +281,8 @@ strict chaqiruv bilan qo'llanadi.
 
 ### 4.6. SQLx
 
-`sqlx` feature'i `Type<DB>`, `Encode<'q, DB>` va `Decode<'r, DB>`ni yoqadi.
+`sqlx-0_8` / `sqlx-0_9` feature'lari `Type<DB>`, `Encode<'q, DB>` va `Decode<'r, DB>`ni
+yoqadi (`sqlx` va `sqlx-postgres` — 0.9 uchun moslik aliaslari).
 Faqat `sqlx-postgres` qo'shimcha `PgHasArrayType`ni beradi; bu Postgres
 `Vec<T>` va `= ANY($1)` kabi ishlatishlari uchun kerak. Umumiy uch trait
 `DB: Database` orqali driver-agnostic.
@@ -307,11 +308,30 @@ kategoriyasini beradi. Shu sabab inputda `try_new_db_safe()` yoki leaf kerak bo'
 `sqlx_via!` ham `#[sqlx(transparent)]` derive'i emas: decode closure'i yuqoridagi
 tipga xos semantikani belgilaydi. Konversiya xatosi `Row::try_get`da xato bo'lib chiqadi.
 
+#### Ikki sqlx liniyasi
+
+SQLx 0.8 va 0.9 orasidagi yagona nomuvofiqlik — `Database::ArgumentBuffer`: 0.8 da u
+lifetime'li GAT (`ArgumentBuffer<'q>`), 0.9 da lifetime'siz. Qolgan butun sirt bir xil,
+shuning uchun `sqlx_via!` versiyaga parametrlangan: `sqlx_via_type_decode!` va
+`sqlx_via_pg_array!` ikkalasiga umumiy, `Encode` esa `sqlx_via_encode_0_8!` /
+`sqlx_via_encode_0_9!` ga ajratilgan (lifetime tokenini makrolar orasida uzatmaslik
+uchun). `NumId` ham xuddi shu tuzilishga ega.
+
+`sqlx_0_8::Type` va `sqlx_0_9::Type` — **turli crate'lardagi turli trait'lar**, shuning
+uchun bitta tip uchun ikkalasini implement qilish coherence buzmaydi. Bu qaror
+`compile_error!` guard'ini va mutually-exclusive feature'ni keraksiz qiladi hamda
+dependency grafidagi feature unification xavfini yo'q qiladi. Ikkala liniya bir xil
+natija berishini [sqlx_version_parity.rs](../tests/sqlx_version_parity.rs) qulflaydi.
+
 Postgres massivlarida wrapper `PgHasArrayType::array_type_info` va
 `array_compatible`ni ichki `String` yoki `i64`ga to'liq delegatsiya qiladi. Shu sabab
 `TEXT[]` bilan birga `VARCHAR[]`, `array_agg(VARCHAR)` va `= ANY($1)` ham qo'llanadi.
 DB-siz test resolved native type info va trait chegaralarini, ignored jonli test esa
-PostgreSQL 16da scalar/NULL/massiv/error encode-decode yo'llarini tekshiradi.
+PostgreSQL 16da scalar/NULL/massiv/error encode-decode yo'llarini tekshiradi. Jonli
+suite tanasi [common/postgres_suite.rs](../tests/common/postgres_suite.rs) da va ikkita
+test crate'i orqali yuritiladi — `#[sqlx::test]` proc-makrosi `::sqlx::` yo'llarini
+generatsiya qilgani uchun har bir crate o'z versiyasini root'da
+`extern crate ... as sqlx;` bilan nomlaydi.
 
 ## 5. Asosiy API va tip oilalari
 
@@ -345,7 +365,10 @@ Telefon registri to'rtta exact slice'dan iborat: `MOBILE_CODES`, `GEOGRAPHIC_COD
 bor, demak tasniflar o'zaro istisno emas. Eski `REGIONAL_CODES: RangeInclusive<u8> =
 60..=79` faqat moslik uchun deprecated holatda saqlanadi va strict tasnifda ishlatilmaydi.
 Slice shakli yangi kod qo'shilishini public massiv uzunligiga bog'lamaydi. Registry —
-vaqtga bog'liq snapshot; `parse()` undan mustaqil.
+vaqtga bog'liq snapshot; `parse()` undan mustaqil. Iste'molchi crate ro'yxatiga
+bog'lanishni xohlamasa, `operator_code()` xom kodni qaytaradi va siyosat consumer
+qatlamida (config/DB) qoladi — bu registry eskirishiga qarshi hujjatlashtirilgan
+chiqish yo'li.
 
 - mobil: `20, 33, 50, 70, 77, 80, 87, 88, 90, 91, 92, 93, 94, 95, 97, 98, 99`;
 - geografik: `61, 62, 65, 66, 67, 69, 70, 71, 72, 73, 74, 75, 76, 79`;
@@ -497,12 +520,21 @@ Cargo bitta paketda feature bo'yicha turli `rust-version` e'lon qila olmaydi. Ma
 | --- | --- | --- |
 | Rust 1.85, feature'siz | `cargo +1.85.0 check --no-default-features` | Eng kichik umumiy crate |
 | Rust 1.85, sqlx'siz imkoniyatlar | `cargo +1.85.0 check --features date,id,serde,zeroize,serialize-secrets` | E'lon qilingan iste'molchi MSRVsi |
-| Rust 1.94, SQLx bilan | `cargo +1.94.0 check --all-targets --all-features` | SQLx va barcha target/feature kombinatsiyasi |
+| Rust 1.85, SQLx 0.8 bilan | `just msrv-sqlx-08` (lockfile qayta resolve + `cargo +1.85.0 check`) | SQLx 0.8 liniyasi crate polida resolve bo'lishi |
+| Rust 1.94, SQLx 0.9 bilan | `cargo +1.94.0 check --all-targets --all-features` | SQLx 0.9 va barcha target/feature kombinatsiyasi |
 
 1.85 tekshiruvlarida `--all-targets` ataylab yo'q: u downstreamga kirmaydigan
 dev-dependency'larni, jumladan Rust 1.86 talab qiladigan Criterion benchmarki va Rust
 1.94 talab qiladigan jonli SQLx test vositalarini tortadi. 1.94/sqlx tekshiruvida esa
-`--all-targets --all-features` ataylab bor; `postgres-test` ham 1.94da ishlaydi.
+`--all-targets --all-features` ataylab bor.
+
+SQLx 0.8 o'z `rust-version`ini e'lon qilmaydi, ammo tranzitiv `url` → `idna` → `icu_*`
+zanjirining eng yangi versiyalari 1.86–1.88 talab qiladi. Cargo'ning MSRV-aware
+resolver'i yangi lockfile yaratganda mos versiyalarni tanlaydi, shuning uchun
+`msrv-sqlx-08` avval `generate-lockfile` qiladi (lokalda lockfile `trap` bilan
+tiklanadi, CI'da ish daraxti bir martalik). Jonli `postgres-test-08` esa 1.94da
+ishlaydi: `cargo test` dev-dependency'larni (criterion → 1.86, sqlx 0.9 dev-dep →
+1.94) har doim resolve qiladi — bu iste'molchi poliga taalluqli emas.
 
 ## 7. Kengaytirish retseptlari
 
@@ -584,7 +616,8 @@ tekshiradigan testni va test qamramaydigan chegarani alohida ko'rsatadi:
 | Uch sir tipi `Display` emas | [compile_fail.rs](../tests/compile_fail.rs) → `secret_no_display.rs` generic boundi | Compile-fail trait yo'qligini tekshiradi, log pipeline'larini emas |
 | Uch sir tipi `serialize-secrets`siz `Serialize` emas | `secret_no_serialize.rs` faqat feature o'chiq bo'lsa ishlaydi; [serde.rs](../tests/serde.rs) feature yoqilganda `AccessToken`ning ijobiy yo'lini tekshiradi | Ijobiy integration testi qolgan ikki sirni alohida serialize qilmaydi |
 | `Gender` downstream exhaustive matchda wildcard talab qiladi | `gender_requires_wildcard.rs` trybuild compile-fail snapshoti | Wildcard bilan ijobiy fixture yo'q; Rust compiler qoidasi va CHANGELOG migratsiyasi tayanch |
-| SQLx mapping, ichki array compatibility va haqiqiy Postgres query yo'llari ishlaydi | [sqlx_bounds.rs](../tests/sqlx_bounds.rs): DB-siz String/NumId `array_compatible` delegatsiyasi; [sqlx_postgres.rs](../tests/sqlx_postgres.rs): TEXT/VARCHAR, DATE/UUID/BIGINT, NULL, TEXT[]/VARCHAR[]/array_agg/ANY va leaf xatolar | Jonli test PostgreSQL 16 hamda `DATABASE_URL`/CREATE DATABASE huquqini talab qiladi va oddiy testda ignored |
+| SQLx mapping, ichki array compatibility va haqiqiy Postgres query yo'llari ishlaydi | [sqlx_bounds.rs](../tests/sqlx_bounds.rs): DB-siz String/NumId `array_compatible` delegatsiyasi, har sqlx liniyasi uchun alohida modul; [common/postgres_suite.rs](../tests/common/postgres_suite.rs): TEXT/VARCHAR, DATE/UUID/BIGINT, NULL, TEXT[]/VARCHAR[]/array_agg/ANY va leaf xatolar | Jonli test PostgreSQL 16 hamda `DATABASE_URL`/CREATE DATABASE huquqini talab qiladi va oddiy testda ignored |
+| SQLx 0.8 va 0.9 bir xil tip nomi va compatibility natijasini beradi | [sqlx_version_parity.rs](../tests/sqlx_version_parity.rs): `type_info`/`array_type_info` nomlari va `compatible`/`array_compatible` booleanlari | Faqat ikkala feature birga yoqilganda ishlaydi; runtime encode/decode farqlarini emas, tip shartnomasini solishtiradi |
 | Sir Debug redacted va teng uzunlikda taqqoslash `subtle`dan foydalanadi | [secret.rs](../src/secret.rs) unit testi `AccessToken`ni tekshiradi | Qolgan ikki tip alohida runtime testlanmagan; timing o'lchovi va zeroize xotira isboti yo'q |
 | `BirthDate` `MIN_YEAR` va `today + 1` chegarasini saqlaydi | `deterministic_boundaries` unit testi | Real tizim soati va barcha kalendar format kombinatsiyalari emas |
 | READMEdagi bajariladigan misollar crate API bilan mos | `cargo test --all-features --doc` | Oddiy `rust` va `rust,compile_fail` bloklari tekshiriladi; `rust,ignore` SQLx bloki kompilyatsiya qilinmaydi |
@@ -617,15 +650,16 @@ recipe'larni CI yo'nalishlariga mos ketma-ket bajaradi:
 | Paket tarkibi/lock | `package` | `package` jobi |
 | CVE va unused dependency | `audit` | `audit` jobi |
 | Public SemVer | `semver` | `semver` jobi |
-| Jonli SQLx/PostgreSQL 16 | `postgres-test` (alohida) | `live-postgres` jobi |
+| Jonli SQLx/PostgreSQL 16 | `postgres-test`, `postgres-test-08` (alohida) | `live-postgres` matritsa jobi (sqlx 0.8 × 0.9, ikkalasi 1.94) |
+| SQLx 0.8 × Rust 1.85 resolve | `msrv-sqlx-08` | `msrv` jobining qayta-resolve qadami |
 
 Bu byte-for-byte bir xil bajarilish emas:
 
 - lokal `package` commitdan oldin ishlashi uchun `cargo package --locked --allow-dirty`,
   CI toza checkoutda `--allow-dirty`siz ishlaydi;
 - lokal `just ci` ketma-ket, GitHub joblari esa ajratilgan va parallel bo'lishi mumkin;
-- `postgres-test` `just ci` dependency'si emas: u disposable DB va CREATE DATABASE
-  huquqli `DATABASE_URL` bilan alohida prerequisite sifatida bajariladi;
+- `postgres-test` va `postgres-test-08` `just ci` dependency'si emas: ular disposable DB
+  va CREATE DATABASE huquqli `DATABASE_URL` bilan alohida prerequisite sifatida bajariladi;
 - `semver` va `semver-detail` global `-D warnings`ni `RUSTFLAGS=""` bilan bo'shatadi,
   CI semver baseline'i ham xuddi shunday; mahalliy `semver-detail`ning
   `--all-features --release-type patch` diagnostik rejimi uchun to'g'ridan-to'g'ri CI job yo'q.
@@ -644,7 +678,8 @@ kelishi normal.
 2. Versiya turini tanlab, `CHANGELOG.md`ga Keep a Changelog bo'limi, ⚠️ belgi va
    breaking o'zgarish uchun migratsiya jadvalini yozing.
 3. `just ci`ni to'liq o'tkazing.
-4. SQLx yo'li o'zgargan bo'lsa disposable PostgreSQL 16 bilan `just postgres-test`ni o'tkazing.
+4. SQLx yo'li o'zgargan bo'lsa disposable PostgreSQL 16 bilan `just postgres-test` va
+   `just postgres-test-08` ni o'tkazing.
 5. Toza working tree'da `just publish-check` bilan dry-run bajaring.
 6. Faqat aniq reliz qaroridan keyin `just publish` bajaring; publish qaytarilmaydi.
 
@@ -654,8 +689,9 @@ regressiya testi bilan hujjatlashtiriladi.
 
 ## 10. Qo'shimcha reference
 
-Release tayyorgarligidagi package versiyasi `0.23.0`, Rust editioni 2024. Manifestdagi
-umumiy `rust-version` 1.85; `sqlx` bilan amaliy pol §6 da ko'rsatilganidek 1.94.
+Release tayyorgarligidagi package versiyasi `0.24.0`, Rust editioni 2024. Manifestdagi
+umumiy `rust-version` 1.85; `sqlx-0_9` bilan amaliy pol §6 da ko'rsatilganidek 1.94,
+`sqlx-0_8` bilan esa lockfile resolve'iga qarab 1.85–1.88.
 
 ### 14 source fayli xaritasi
 
@@ -674,7 +710,7 @@ umumiy `rust-version` 1.85; `sqlx` bilan amaliy pol §6 da ko'rsatilganidek 1.94
 | [secret.rs](../src/secret.rs) | Tor API'li uch sir tipi | `AccessToken`, `RefreshToken`, `ClientSecret`, `TokenError`, `MAX_TOKEN_LEN` | Serde/zeroize sub-gatelari |
 | [error.rs](../src/error.rs) | Leaf xatolar aggregate'i | `TypeError` | Variantlari `date/id` bilan gate'lanadi |
 | [serde_support.rs](../src/serde_support.rs) | Umumiy string-deserializatsiya Visitor'i | crate-private | `serde` |
-| [sqlx_support.rs](../src/sqlx_support.rs) | Ichki tip orqali SQLx traitlari makrosi | crate-private | `sqlx`, `sqlx-postgres` |
+| [sqlx_support.rs](../src/sqlx_support.rs) | Ichki tip orqali SQLx traitlari makrosi, ikki versiyaga parametrlangan | crate-private | `sqlx-0_8`, `sqlx-0_9` va ularning `-postgres` variantlari |
 
 Qo'shimcha bajariladigan artefaktlar: `tests/`dagi property, Serde, DB-siz va jonli SQLx,
 maxfiy dataset harnessi hamda compile-fail integration testlari;

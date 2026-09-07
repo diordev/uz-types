@@ -215,7 +215,7 @@ impl<'de> serde::Deserialize<'de> for BirthDate {
     }
 }
 
-#[cfg(feature = "sqlx")]
+#[cfg(any(feature = "sqlx-0_8", feature = "sqlx-0_9"))]
 crate::sqlx_support::sqlx_via!(
     BirthDate,
     NaiveDate,
