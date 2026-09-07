@@ -25,8 +25,10 @@
 .project
 .settings
 .classpath
-/.air
 
 # Log file
 *.log
 graphify-out/.graphify_python
+
+# JetBrains Air local workspace
+/.air

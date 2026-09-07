@@ -119,3 +119,48 @@ publish: publish-check
 # Modul strukturasi. Talab: cargo install cargo-modules
 tree:
     cargo-modules structure
+
+
+# ==========================================
+# DEV / AI SETUP
+# ==========================================
+
+# Codex + Claude + Graphify lokal environment holatini tekshirish
+ai-check:
+    @echo "== Codex =="
+    @command -v codex >/dev/null && codex --version || echo "❌ codex topilmadi"
+    @echo
+    @echo "== Claude =="
+    @command -v claude >/dev/null && claude --version || echo "❌ claude topilmadi"
+    @echo
+    @echo "== Graphify =="
+    @command -v graphify >/dev/null && graphify --version || echo "❌ graphify topilmadi"
+    @echo
+    @echo "== ripgrep =="
+    @command -v rg >/dev/null && rg --version | head -1 || echo "❌ rg topilmadi"
+    @echo
+    @echo "== Codex MCP =="
+    @codex mcp list 2>/dev/null || true
+    @echo
+    @echo "== Claude MCP =="
+    @claude mcp list 2>/dev/null || true
+
+# Graphify skill + MCP'larni joriy kompyuterda sozlash
+# Global config'larni faqat shu explicit target o'zgartiradi.
+ai-setup:
+    @command -v graphify >/dev/null || { echo "❌ graphify kerak"; exit 1; }
+    @command -v codex >/dev/null || { echo "❌ codex kerak"; exit 1; }
+    @command -v claude >/dev/null || { echo "❌ claude kerak"; exit 1; }
+
+    graphify install --platform codex
+    graphify install --platform claude
+
+    @codex mcp remove graphify >/dev/null 2>&1 || true
+    codex mcp add graphify -- graphify-mcp graphify-out/graph.json
+
+    @claude mcp remove graphify >/dev/null 2>&1 || true
+    claude mcp add --scope user graphify -- graphify-mcp graphify-out/graph.json
+
+    @echo
+    @echo "✅ AI environment sozlandi."
+    @echo "Tekshirish: just ai-check"
