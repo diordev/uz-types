@@ -356,17 +356,6 @@
       "source_location": "L433"
     },
     {
-      "id": "src_id_numid_tag_r_get",
-      "label": ".get()",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "Id<Tag>",
-      "file_type": "code",
-      "norm_label": ".get()",
-      "source_file": "src/id.rs",
-      "source_location": "L367"
-    },
-    {
       "id": "src_id_numid_tag_r_hash",
       "label": ".hash()",
       "_origin": "ast",
@@ -972,17 +961,6 @@
       "source_location": ""
     },
     {
-      "id": "src_birth_date",
-      "label": "birth_date.rs",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "BirthDate",
-      "file_type": "code",
-      "norm_label": "birth_date.rs",
-      "source_file": "src/birth_date.rs",
-      "source_location": "L1"
-    },
-    {
       "id": "src_birth_date_birthdate",
       "label": "BirthDate",
       "_origin": "ast",
@@ -1247,17 +1225,6 @@
       "source_location": "L31"
     },
     {
-      "id": "src_birth_date_deterministic_boundaries",
-      "label": "deterministic_boundaries()",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "BirthDate",
-      "file_type": "code",
-      "norm_label": "deterministic_boundaries()",
-      "source_file": "src/birth_date.rs",
-      "source_location": "L249"
-    },
-    {
       "id": "src_birth_date_naivedate",
       "label": "NaiveDate",
       "_origin": "ast",
@@ -1423,6 +1390,28 @@
       "source_location": ""
     },
     {
+      "id": "src_birth_date",
+      "label": "birth_date.rs",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "EmailAddress",
+      "file_type": "code",
+      "norm_label": "birth_date.rs",
+      "source_file": "src/birth_date.rs",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_birth_date_deterministic_boundaries",
+      "label": "deterministic_boundaries()",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "EmailAddress",
+      "file_type": "code",
+      "norm_label": "deterministic_boundaries()",
+      "source_file": "src/birth_date.rs",
+      "source_location": "L249"
+    },
+    {
       "id": "src_email",
       "label": "email.rs",
       "_origin": "ast",
@@ -1432,6 +1421,17 @@
       "norm_label": "email.rs",
       "source_file": "src/email.rs",
       "source_location": "L1"
+    },
+    {
+      "id": "src_email_accepts_ascii_email_at_max_length",
+      "label": "accepts_ascii_email_at_max_length()",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "EmailAddress",
+      "file_type": "code",
+      "norm_label": "accepts_ascii_email_at_max_length()",
+      "source_file": "src/email.rs",
+      "source_location": "L154"
     },
     {
       "id": "src_email_emailaddress",
@@ -1531,6 +1531,17 @@
       "norm_label": "emailaddresserror",
       "source_file": "src/email.rs",
       "source_location": "L129"
+    },
+    {
+      "id": "src_email_errors_are_precise_above_max_length",
+      "label": "errors_are_precise_above_max_length()",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "EmailAddress",
+      "file_type": "code",
+      "norm_label": "errors_are_precise_above_max_length()",
+      "source_file": "src/email.rs",
+      "source_location": "L169"
     },
     {
       "id": "src_email_parse_and_accessors",
@@ -2169,6 +2180,17 @@
       "norm_label": ".from()",
       "source_file": "src/id.rs",
       "source_location": "L490"
+    },
+    {
+      "id": "src_id_numid_tag_r_get",
+      "label": ".get()",
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "String",
+      "file_type": "code",
+      "norm_label": ".get()",
+      "source_file": "src/id.rs",
+      "source_location": "L367"
     },
     {
       "id": "src_id_numid_tag_r_new",
@@ -7135,6 +7157,28 @@
       "weight": 1.0
     },
     {
+      "source": "src_email",
+      "target": "src_email_accepts_ascii_email_at_max_length",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/email.rs",
+      "source_location": "L154",
+      "weight": 1.0
+    },
+    {
+      "source": "src_email",
+      "target": "src_email_errors_are_precise_above_max_length",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/email.rs",
+      "source_location": "L169",
+      "weight": 1.0
+    },
+    {
       "source": "src_error",
       "target": "src_error_typeerror",
       "relation": "contains",
@@ -9588,5 +9632,5 @@
       "source_file": "graphify-out/memory/query_20260906_073300_09ebd60e_explain_the_architecture_of_this_project.md"
     }
   ],
-  "built_at_commit": "71d32e70d42bcea8fc028988b0cd4cc255a49883"
+  "built_at_commit": "22077fb0fc6272f49fbac0aa6a3c202c7fb7556b"
 }

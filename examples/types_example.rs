@@ -109,8 +109,8 @@ fn main() -> Result<(), TypeError> {
 
     // Haqiqiy qiymat faqat tashqi xizmatga uzatishda olinadi
     println!(
-        "\n(Authorization header uchun) Bearer {:#?}...",
-        access_token
+        "\n(Authorization header uchun) Bearer {}...",
+        access_token.expose_secret()
     );
 
     Ok(())

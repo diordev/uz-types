@@ -6,10 +6,10 @@
     "semantic_hash": ""
   },
   "src/email.rs": {
-    "mtime": 1788493259.7227006,
-    "seen": 1788757819.990936,
-    "ast_hash": "aa55ed1b0750f576093281bf90b899b7",
-    "semantic_hash": "aa55ed1b0750f576093281bf90b899b7"
+    "mtime": 1788848766.7486293,
+    "seen": 1788848810.244257,
+    "ast_hash": "737c4473947c87b45745e466445e4d3e",
+    "semantic_hash": ""
   },
   "src/error.rs": {
     "mtime": 1788493259.722887,

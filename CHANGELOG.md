@@ -8,6 +8,45 @@ Breaking o'zgarishlar ⚠️ bilan belgilanadi va reliz oxirida migratsiya jadva
 
 ## [Unreleased]
 
+## [0.25.0] — 2026-09-08
+
+Nashr paketi tarkibi va email xatolari diagnostikasi tuzatildi. Public tiplar,
+metodlar, feature'lar va MSRV saqlandi.
+
+### Tuzatildi
+
+- `tests/` va `benches/` kataloglari crates.io paketidan chiqarildi. Test va
+  benchmarklar repoda saqlandi; paketdagi yetishmaydigan fixture muammosi yopildi.
+- Example'da Authorization uchun tokenning haqiqiy qiymati `expose_secret()`
+  orqali olinadigan bo'ldi.
+- `EmailAddressError::Length` xabarida `characters` o'rniga `bytes` yoziladi.
+
+### ⚠️ Breaking
+
+- `EmailAddress` xato ustuvorligi o'zgardi: trimdan keyin 254 baytdan uzun bo'lib,
+  non-ASCII belgi yoki ichki whitespace saqlagan matn endi `Length` o'rniga
+  `Format` qaytaradi. Qabul qilinadigan qiymatlar to'plami o'zgarmadi.
+
+### Qo'shildi
+
+- Emailning 254/255 bayt chegarasi hamda uzun non-ASCII va whitespace kirishlari
+  uchun regressiya testlari qo'shildi; `parse(&str)` va `TryFrom<String>` yo'llari
+  bir xil natija berishi tekshiriladi.
+
+### Hujjatlashtirildi
+
+- Email uzunlik chegaralari baytda ifodalanishi aniqlandi.
+- README'da `Passport`/`Pinfl` qiymatlari `Debug`/`Display` orqali loglarda
+  to'liq ko'rinishi va maskalash iste'molchi zimmasida ekani aytildi.
+
+### Migratsiya 0.24 → 0.25
+
+| 0.24 | 0.25 ga o'tish |
+| --- | --- |
+| 254 baytdan uzun non-ASCII yoki ichki whitespace bor email uchun `Length` kutiladi | `Format`ni kuting; xato variantiga bog'langan tekshiruvlarni yangilang. |
+| `Length` xabaridagi `characters` matniga bog'langan test mavjud | `bytes`ga yangilang; imkon bo'lsa xato variantini tekshiring. |
+| Tarqatma paketdan integration test yoki benchmark ishga tushiriladi | Tegishli relizning Git checkout'idan foydalaning. |
+
 ## [0.24.0] — 2026-09-07
 
 SQLx integratsiyasi endi ikkala amaldagi minor liniyada ishlaydi. Shu bilan `sqlx`
@@ -690,7 +729,8 @@ real servisda ishlatilgandan keyin. Feature nomlari va public API qulflanadi.
 **1.0 dan keyin** (yangi tiplar, crate'ga kirmaydi): `Inn`/`Stir`, `BankCard` (Luhn), `Mfo`,
 `AccountNumber`; `PhoneNumber::parse_local()` (9 raqamli mahalliy shakl).
 
-[Unreleased]: https://github.com/diordev/uz-types/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/diordev/uz-types/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/diordev/uz-types/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/diordev/uz-types/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/diordev/uz-types/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/diordev/uz-types/compare/v0.21.0...v0.22.0

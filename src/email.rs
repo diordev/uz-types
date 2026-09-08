@@ -8,15 +8,15 @@ string_newtype! {
 }
 
 impl EmailAddress {
-    /// RFC 5321: maksimal uzunlik.
+    /// RFC 5321: maksimal uzunlik, baytda.
     pub const MAX_LEN: usize = 254;
-    /// RFC 5321: local-part maksimal uzunligi.
+    /// RFC 5321: local-part maksimal uzunligi, baytda.
     pub const LOCAL_PART_MAX_LEN: usize = 64;
-    /// RFC 1035: domain maksimal uzunligi.
+    /// RFC 1035: domain maksimal uzunligi, baytda.
     pub const DOMAIN_MAX_LEN: usize = 253;
-    /// RFC 1035: bitta label maksimal uzunligi.
+    /// RFC 1035: bitta label maksimal uzunligi, baytda.
     pub const DOMAIN_LABEL_MAX_LEN: usize = 63;
-    /// TLD minimal uzunligi.
+    /// TLD minimal uzunligi, baytda.
     pub const TLD_MIN_LEN: usize = 2;
 
     fn normalize(s: &mut str) {
@@ -24,11 +24,11 @@ impl EmailAddress {
     }
 
     fn validate(s: &str) -> Result<(), EmailAddressError> {
-        if s.len() > Self::MAX_LEN {
-            return Err(EmailAddressError::Length);
-        }
         if !s.is_ascii() || s.contains(char::is_whitespace) {
             return Err(EmailAddressError::Format);
+        }
+        if s.len() > Self::MAX_LEN {
+            return Err(EmailAddressError::Length);
         }
         let Some((local, domain)) = s.split_once('@') else {
             return Err(EmailAddressError::Format);
@@ -127,8 +127,8 @@ impl EmailAddress {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum EmailAddressError {
-    /// 254 belgidan uzun.
-    #[error("email is too long, maximum is {} characters", EmailAddress::MAX_LEN)]
+    /// 254 baytdan uzun.
+    #[error("email is too long, maximum is {} bytes", EmailAddress::MAX_LEN)]
     Length,
     /// Format noto'g'ri.
     #[error("email format is invalid, expected valid local-part and domain")]
@@ -148,5 +148,44 @@ mod tests {
         assert!(EmailAddress::parse("a@b.co").is_ok());
         assert_eq!(EmailAddress::parse("a@b.c"), Err(EmailAddressError::Format));
         assert_eq!(EmailAddress::parse("a@b"), Err(EmailAddressError::Format));
+    }
+
+    #[test]
+    fn accepts_ascii_email_at_max_length() {
+        let input = format!(
+            "{}@{}.{}.{}",
+            "a".repeat(64),
+            "b".repeat(63),
+            "c".repeat(63),
+            "d".repeat(61)
+        );
+        assert_eq!(input.len(), 254);
+        let parsed = EmailAddress::parse(&input).unwrap();
+        assert_eq!(parsed.as_str(), input);
+        assert_eq!(EmailAddress::try_from(input), Ok(parsed));
+    }
+
+    #[test]
+    fn errors_are_precise_above_max_length() {
+        let ascii = format!(
+            "{}@{}.{}.{}",
+            "a".repeat(64),
+            "b".repeat(63),
+            "c".repeat(63),
+            "d".repeat(62)
+        );
+        let whitespace = format!("{} {}", "a".repeat(127), "b".repeat(127));
+        assert_eq!(ascii.len(), 255);
+        assert_eq!(whitespace.len(), 255);
+
+        for (input, expected) in [
+            (ascii, EmailAddressError::Length),
+            ("é".repeat(128), EmailAddressError::Format),
+            (whitespace, EmailAddressError::Format),
+        ] {
+            assert!(input.len() > EmailAddress::MAX_LEN);
+            assert_eq!(EmailAddress::parse(&input), Err(expected));
+            assert_eq!(EmailAddress::try_from(input), Err(expected));
+        }
     }
 }

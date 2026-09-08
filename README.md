@@ -73,14 +73,14 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 
 ```toml
 [dependencies]
-uz-types = "0.24"
+uz-types = "0.25"
 ```
 
 Yoki kerakli feature'lar bilan:
 
 ```toml
 [dependencies]
-uz-types = { version = "0.24", features = ["serde", "sqlx-postgres"] }
+uz-types = { version = "0.25", features = ["serde", "sqlx-postgres"] }
 ```
 
 | Feature             | Default | Nima yoqadi                                                                    | Qo'shimcha dependency |
@@ -100,7 +100,7 @@ uz-types = { version = "0.24", features = ["serde", "sqlx-postgres"] }
 **Qoida:** tiplar default'da bor, integratsiyalar — siz tanlaysiz. Faqat `Passport` kerak bo'lgan servis `chrono`/`uuid` ni ham xohlamasa:
 
 ```toml
-uz-types = { version = "0.24", default-features = false }
+uz-types = { version = "0.25", default-features = false }
 ```
 
 `Pinfl::parse_strict()`ning Gregorian tekshiruvi `date` feature'iga bog'liq emas;
@@ -335,7 +335,7 @@ assert_eq!(EmailAddress::parse("a@b..c"), Err(EmailAddressError::Format));   // 
 assert!(EmailAddress::parse("a@b.co").is_ok());
 ```
 
-Tekshiriladigan qoidalar: local-part bo'sh emas va 64 belgidan uzun emas, `.` bilan boshlanmaydi/tugamaydi, `..` yo'q, faqat RFC 5322 ruxsat bergan belgilar; domain kamida ikki label, har label `[a-z0-9-]`, `-` bilan boshlanmaydi/tugamaydi, TLD kamida 2 ta harf; umumiy uzunlik ≤ 254.
+Tekshiriladigan qoidalar: local-part bo'sh emas va 64 baytdan uzun emas, `.` bilan boshlanmaydi/tugamaydi, `..` yo'q, faqat RFC 5322 ruxsat bergan belgilar; domain kamida ikki label, har label `[a-z0-9-]`, `-` bilan boshlanmaydi/tugamaydi, TLD kamida 2 ta harf; umumiy uzunlik ≤ 254 bayt.
 
 ### BirthDate (feature `date`)
 
@@ -649,7 +649,7 @@ bir xil va ikkalasi ham jonli PostgreSQL 16 da tekshiriladi.
 
 ```toml
 # SQLx 0.8 da qolgan servis — qo'lda `String`/`Uuid`/`i64` map qilish shart emas.
-uz-types = { version = "0.24", default-features = false, features = ["date", "id", "sqlx-0_8-postgres"] }
+uz-types = { version = "0.25", default-features = false, features = ["date", "id", "sqlx-0_8-postgres"] }
 ```
 
 SQLx 0.8 o'z `rust-version`ini e'lon qilmaydi, lekin uning tranzitiv `url` → `idna` →
@@ -731,6 +731,7 @@ Yangilashdan oldin iste'molchi servisda quyidagilarni tekshiring:
 | Tip            | Cheklov                                                                                                                                                                                                           |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Passport`     | Faqat format. Seriya amaldagi ro'yxatga kiradimi — tekshirilmaydi.                                                                                                                                                |
+| `Passport` / `Pinfl` | `Debug` / `Display` loglarda to'liq qiymatni chiqaradi — maskalash iste'molchi zimmasida. |
 | `Pinfl`        | `parse()` faqat 14 ta ASCII raqam. Checksum, jins/asr va to'liq Gregorian sana — `parse_strict()` yoki query metodlar. Haqiqiy shaxsga tegishliligini faqat davlat xizmati (my.gov.uz va h.k.) tasdiqlaydi.                     |
 | `PhoneNumber`  | 9 raqamli mahalliy shakl (`90 123 45 67`) qabul qilinmaydi — `998` bilan yuboring. Exact kod slice'lari crate ichida; eskirsa `parse()` ta'sirlanmaydi, `is_*()` / `parse_strict()` ta'sirlanadi.                               |
 | `EmailAddress` | Faqat ASCII. IDN (unicode domenlar), quoted local-part (`"a b"@x.com`) va IP-literal (`a@[1.2.3.4]`) qabul qilinmaydi. Local-part ham lowercase qilinadi.                                                         |

@@ -689,7 +689,7 @@ regressiya testi bilan hujjatlashtiriladi.
 
 ## 10. Qo'shimcha reference
 
-Release tayyorgarligidagi package versiyasi `0.24.0`, Rust editioni 2024. Manifestdagi
+Release tayyorgarligidagi package versiyasi `0.25.0`, Rust editioni 2024. Manifestdagi
 umumiy `rust-version` 1.85; `sqlx-0_9` bilan amaliy pol §6 da ko'rsatilganidek 1.94,
 `sqlx-0_8` bilan esa lockfile resolve'iga qarab 1.85–1.88.
 

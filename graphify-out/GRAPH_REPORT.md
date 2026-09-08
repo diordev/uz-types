@@ -1,16 +1,16 @@
-# Graph Report - uz-types  (2026-09-07)
+# Graph Report - uz-types  (2026-09-08)
 
 ## Corpus Check
-- 16 files · ~8,741 words
+- 16 files · ~8,818 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 249 nodes · 581 edges · 11 communities
+- 251 nodes · 583 edges · 11 communities
 - Extraction: 98% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 7 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `71d32e70`
+- Built from commit: `22077fb0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -68,11 +68,11 @@ Cohesion: 0.20
 Nodes (8): IdError, numid_conversions_match_the_rest_of_the_crate(), D, Error, Ok, Result, S, Self
 
 ### Community 2 - "BirthDate"
-Cohesion: 0.11
+Cohesion: 0.12
 Nodes (18): AsRef, BirthDate, BirthDateError, DateFormat, NaiveDate, D, Deserialize, Display (+10 more)
 
 ### Community 3 - "EmailAddress"
-Cohesion: 0.09
+Cohesion: 0.07
 Nodes (18): Explain the architecture of this project (graphify query), email domain validation check, EmailAddress, EmailAddressError, email local-part validation check, Result, TypeError, trim_in_place() (+10 more)
 
 ### Community 4 - "Pinfl"
@@ -80,7 +80,7 @@ Cohesion: 0.11
 Nodes (11): is_leap_year(), is_valid_gregorian_date(), Gender, official_examples_pass_strict(), Pinfl, PinflError, Option, Result (+3 more)
 
 ### Community 5 - "String"
-Cohesion: 0.21
+Cohesion: 0.20
 Nodes (14): PhantomData, R, db_safe_bounds_move_the_error_to_construction(), i64, Id, NumId, NumId<Tag, i64>, NumId<Tag, u64> (+6 more)
 
 ### Community 6 - "PhoneNumber"
@@ -107,7 +107,7 @@ Nodes (3): Ordering, Option, Version
 
 ## Knowledge Gaps
 - **7 isolated node(s):** `Order`, `Answer`, `Source Nodes`, `email domain validation check`, `email local-part validation check` (+2 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 58 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 60 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -117,12 +117,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `EmailAddress` and `email local-part validation check`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `String` connect `String` to `Id<Tag>`, `Self`, `BirthDate`, `EmailAddress`, `Pinfl`, `PhoneNumber`, `passport.rs`?**
-  _High betweenness centrality (0.349) - this node is a cross-community bridge._
-- **Why does `BirthDate` connect `BirthDate` to `Pinfl`, `String`?**
-  _High betweenness centrality (0.269) - this node is a cross-community bridge._
+  _High betweenness centrality (0.343) - this node is a cross-community bridge._
+- **Why does `BirthDate` connect `BirthDate` to `EmailAddress`, `Pinfl`, `String`?**
+  _High betweenness centrality (0.267) - this node is a cross-community bridge._
 - **Why does `Id<Tag>` connect `Id<Tag>` to `Self`, `.cmp`, `String`?**
-  _High betweenness centrality (0.174) - this node is a cross-community bridge._
+  _High betweenness centrality (0.173) - this node is a cross-community bridge._
 - **What connects `Order`, `Answer`, `Source Nodes` to the rest of the system?**
   _7 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Id<Tag>` be split into smaller, more focused modules?**
-  _Cohesion score 0.08084163898117387 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08362369337979095 - nodes in this community are weakly interconnected._
