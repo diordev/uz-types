@@ -136,8 +136,10 @@ uchun allocation qo'shish **ataylab qaror**, tasodif emas.
 
 - `#[cfg(feature = "x")]` bilan birga **doim** `#[cfg_attr(docsrs, doc(cfg(feature = "x")))]` —
   docs.rs da foydalanuvchi qaysi feature kerakligini ko'radi.
-- Optional dep'lar orasidagi bog'lanish `Cargo.toml` da: `date = ["dep:chrono", "sqlx?/chrono"]`.
-  `?` — "sqlx yoqilgan bo'lsa". Buni unutish "feature powerset" da kompilyatsiya xatosi beradi.
+- Optional dep'lar orasidagi bog'lanish `Cargo.toml` da:
+  `date = ["dep:chrono", "sqlx-0_8?/chrono", "sqlx-0_9?/chrono"]`.
+  `?` — "shu SQLx dependency'si yoqilgan bo'lsa". Buni unutish "feature powerset" da
+  kompilyatsiya xatosi beradi.
 - Har feature qo'shilganda `cargo hack check --feature-powerset --all-targets` (`just features`)
   ishlatilishi kerak: `--all-features` bitta nuqta, teshiklar kombinatsiyalarda chiqadi.
 - Integration test faylini butunlay gate qilish: fayl boshida `#![cfg(feature = "serde")]`.
@@ -151,8 +153,9 @@ Edition 2024, lekin `rust-version = "1.85"`. Quyidagilar **ishlamaydi**:
 - Yangi stabilizatsiyalangan API'lardan foydalanishdan oldin o'ylang; shubha bo'lsa
   `cargo +1.85.0 check --no-default-features` (`just msrv`).
 
-`sqlx` feature'i 1.94+ talab qiladi — `#[cfg(feature = "sqlx")]` ostidagi kodga
-1.85 cheklovi tegishli emas.
+`sqlx-0_9` feature'i 1.94+ talab qiladi — faqat `#[cfg(feature = "sqlx-0_9")]`
+ostidagi kodga 1.85 cheklovi tegishli emas. `sqlx-0_8` yo'li va ikkala versiya
+ishlatadigan umumiy kod 1.85 bilan mos qolishi shart.
 
 ## 10. Hujjat va test
 

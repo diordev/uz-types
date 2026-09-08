@@ -8,6 +8,24 @@ Breaking o'zgarishlar ⚠️ bilan belgilanadi va reliz oxirida migratsiya jadva
 
 ## [Unreleased]
 
+## [0.26.0] — 2026-09-08
+
+SQLx feature nomlari soddalashtirildi: ikkala versiya uchun asosiy va PostgreSQL
+feature'lari qoldi. Rust tiplari va ularning SQLx trait implementatsiyalari o'zgarmadi.
+
+### ⚠️ Breaking
+
+- `sqlx` va `sqlx-postgres` Cargo feature aliaslari olib tashlandi. SQLx versiyasini
+  aniq ko'rsatuvchi nomlardan foydalaning. SQLx 0.8 va 0.9 qo'llovi, PostgreSQL
+  integratsiyasini alohida yoqish imkoniyati va MSRV talablari saqlandi.
+
+### Migratsiya 0.25 → 0.26
+
+| 0.25 | 0.26 ga o'tish |
+| --- | --- |
+| `features = ["sqlx"]` | `features = ["sqlx-0_9"]` |
+| `features = ["sqlx-postgres"]` | `features = ["sqlx-0_9-postgres"]` |
+
 ## [0.25.0] — 2026-09-08
 
 Nashr paketi tarkibi va email xatolari diagnostikasi tuzatildi. Public tiplar,
@@ -729,7 +747,8 @@ real servisda ishlatilgandan keyin. Feature nomlari va public API qulflanadi.
 **1.0 dan keyin** (yangi tiplar, crate'ga kirmaydi): `Inn`/`Stir`, `BankCard` (Luhn), `Mfo`,
 `AccountNumber`; `PhoneNumber::parse_local()` (9 raqamli mahalliy shakl).
 
-[Unreleased]: https://github.com/diordev/uz-types/compare/v0.25.0...HEAD
+[Unreleased]: https://github.com/diordev/uz-types/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/diordev/uz-types/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/diordev/uz-types/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/diordev/uz-types/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/diordev/uz-types/compare/v0.22.0...v0.23.0

@@ -150,7 +150,7 @@ jobs:
         run: |
           cargo hack check --feature-powerset --all-targets \
             --group-features sqlx-0_8,sqlx-0_8-postgres \
-            --group-features sqlx-0_9,sqlx-0_9-postgres,sqlx,sqlx-postgres
+            --group-features sqlx-0_9,sqlx-0_9-postgres
 
       - name: Har feature alohida (test + doctest)
         run: cargo hack test --each-feature

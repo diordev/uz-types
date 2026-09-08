@@ -18,7 +18,7 @@
 //! - `id` (default) — `Id<Tag>`, `NumId<Tag>` (`uuid`);
 //! - `serde` — `Serialize`/`Deserialize`;
 //! - `sqlx-0_9`, `sqlx-0_9-postgres` — `Type`/`Encode`/`Decode` (+ `PgHasArrayType`),
-//!   SQLx 0.9 ustida; `sqlx` va `sqlx-postgres` — ularning moslik aliaslari;
+//!   SQLx 0.9 ustida;
 //! - `sqlx-0_8`, `sqlx-0_8-postgres` — xuddi shu sirt SQLx 0.8 ustida;
 //! - `zeroize` — sir tiplari `Drop` da xotirani tozalaydi;
 //! - `serialize-secrets` — sir tiplari uchun `Serialize`.

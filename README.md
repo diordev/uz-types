@@ -73,14 +73,14 @@ assert_eq!(pinfl.gender(), Some(Gender::Male));      // rasmiy checksum + strukt
 
 ```toml
 [dependencies]
-uz-types = "0.25"
+uz-types = "0.26"
 ```
 
 Yoki kerakli feature'lar bilan:
 
 ```toml
 [dependencies]
-uz-types = { version = "0.25", features = ["serde", "sqlx-postgres"] }
+uz-types = { version = "0.26", features = ["serde", "sqlx-0_9-postgres"] }
 ```
 
 | Feature             | Default | Nima yoqadi                                                                    | Qo'shimcha dependency |
@@ -92,15 +92,13 @@ uz-types = { version = "0.25", features = ["serde", "sqlx-postgres"] }
 | `sqlx-0_9-postgres` |         | `sqlx-0_9` + `PgHasArrayType` (`Vec<T>`, `= ANY($1)`)                          | `sqlx 0.9/postgres`   |
 | `sqlx-0_8`          |         | Xuddi shu sirt SQLx 0.8 ustida (1.94 poli yo'q — quyida MSRV bo'limiga qarang)  | `sqlx 0.8`            |
 | `sqlx-0_8-postgres` |         | `sqlx-0_8` + `PgHasArrayType`                                                  | `sqlx 0.8/postgres`   |
-| `sqlx`              |         | `sqlx-0_9` uchun alias (moslik nomi)                                           | —                     |
-| `sqlx-postgres`     |         | `sqlx-0_9-postgres` uchun alias (moslik nomi)                                  | —                     |
 | `zeroize`           |         | Sir tiplari `Drop` da xotirani nolga to'ldiradi                                | `zeroize`             |
 | `serialize-secrets` |         | Sir tiplari uchun `Serialize` (masalan, auth-servis token javobi)              | `serde`               |
 
 **Qoida:** tiplar default'da bor, integratsiyalar — siz tanlaysiz. Faqat `Passport` kerak bo'lgan servis `chrono`/`uuid` ni ham xohlamasa:
 
 ```toml
-uz-types = { version = "0.25", default-features = false }
+uz-types = { version = "0.26", default-features = false }
 ```
 
 `Pinfl::parse_strict()`ning Gregorian tekshiruvi `date` feature'iga bog'liq emas;
@@ -594,7 +592,9 @@ assert_eq!(
 
 ## sqlx integratsiyasi
 
-`features = ["sqlx-postgres"]` (yoki faqat `sqlx` + o'zingizning driver'ingiz). Ustun tiplari:
+SQLx 0.9 uchun `features = ["sqlx-0_9-postgres"]` (yoki faqat `sqlx-0_9` +
+o'zingizning driver'ingiz). SQLx 0.8 uchun mos ravishda `sqlx-0_8-postgres` yoki
+`sqlx-0_8` tanlanadi. Ustun tiplari:
 
 | Tip                                                            | Postgres ustuni    |
 | -------------------------------------------------------------- | ------------------ |
@@ -630,7 +630,7 @@ sqlx::query("UPDATE users SET phone = $1 WHERE id = $2")
     .execute(&pool)
     .await?;
 
-// Vec<T> — PgHasArrayType (sqlx-postgres)
+// Vec<T> — PgHasArrayType (sqlx-0_9-postgres)
 let passports: Vec<Passport> = vec![/* … */];
 sqlx::query("SELECT * FROM users WHERE passport = ANY($1)").bind(&passports);
 ```
@@ -644,12 +644,12 @@ bir xil va ikkalasi ham jonli PostgreSQL 16 da tekshiriladi.
 
 | Servisingiz | Feature | rustc |
 | --- | --- | --- |
-| SQLx 0.9 da | `sqlx-0_9-postgres` (yoki eski nom `sqlx-postgres`) | 1.94+ (qat'iy) |
+| SQLx 0.9 da | `sqlx-0_9-postgres` | 1.94+ (qat'iy) |
 | SQLx 0.8 da | `sqlx-0_8-postgres` | 1.85+ (lockfile'ga bog'liq — quyiga qarang) |
 
 ```toml
 # SQLx 0.8 da qolgan servis — qo'lda `String`/`Uuid`/`i64` map qilish shart emas.
-uz-types = { version = "0.25", default-features = false, features = ["date", "id", "sqlx-0_8-postgres"] }
+uz-types = { version = "0.26", default-features = false, features = ["date", "id", "sqlx-0_8-postgres"] }
 ```
 
 SQLx 0.8 o'z `rust-version`ini e'lon qilmaydi, lekin uning tranzitiv `url` → `idna` →
@@ -744,7 +744,7 @@ Yangilashdan oldin iste'molchi servisda quyidagilarni tekshiring:
 ## MSRV va semver
 
 - **MSRV: Rust 1.85** (edition 2024). MSRV ko'tarilishi _minor_ reliz hisoblanadi.
-- **`sqlx-0_9` / `sqlx-0_9-postgres` (va ularning `sqlx` / `sqlx-postgres` aliaslari) Rust 1.94+ talab qiladi** — bu `sqlx 0.9` ning o'z MSRV'i, undan qutulib bo'lmaydi.
+- **`sqlx-0_9` / `sqlx-0_9-postgres` Rust 1.94+ talab qiladi** — bu `sqlx 0.9` ning o'z MSRV'i, undan qutulib bo'lmaydi.
 - **`sqlx-0_8` / `sqlx-0_8-postgres` da 1.94 poli yo'q.** SQLx 0.8 `rust-version` e'lon qilmaydi; amaliy pol tranzitiv `icu_*`/`idna_adapter` dan keladi. MSRV-aware resolve bilan 1.85, committed eng yangi versiyalar bilan ~1.88.
 - Cargo per-feature MSRV'ni qo'llab-quvvatlamaydi, shuning uchun `Cargo.toml` dagi `rust-version` eng past umumiy qiymat — 1.85. CI uchta polni alohida tekshiradi: 1.85 sqlx'siz, 1.85 + sqlx 0.8 (qayta resolve bilan), 1.94 + barcha feature.
 - MSRV kutubxona iste'molchisi uchun `cargo check` bilan o'lchanadi: dev-dependency'lar
@@ -753,7 +753,7 @@ Yangilashdan oldin iste'molchi servisda quyidagilarni tekshiring:
   bu kutubxona iste'molchisiga taalluqli emas. `cargo bench` uchun 1.86+ kerak.
 - Barcha public enum'lar `#[non_exhaustive]` — `match` da `_` tarmog'ini qoldiring.
 - Public konstantalar slice/`RangeInclusive` — yangi kod qo'shilishi breaking emas.
-- Feature nomlari 1.0 gacha qulflangan: `date`, `id`, `serde`, `sqlx`, `sqlx-postgres`, `zeroize`, `serialize-secrets`.
+- Feature nomlari 1.0 gacha qulflangan: `date`, `id`, `serde`, `sqlx-0_8`, `sqlx-0_8-postgres`, `sqlx-0_9`, `sqlx-0_9-postgres`, `zeroize`, `serialize-secrets`.
 - Breaking o'zgarishlar [CHANGELOG](CHANGELOG.md) da migratsiya jadvali bilan beriladi.
 
 ---
@@ -774,7 +774,7 @@ tayanadi. Jonli DB qatlami CI'da va lokal ishda alohida `postgres-test*`. Alohid
 
 | Recipe | Nima qiladi |
 | ---------------- | ----------------------------------------------------------------------------- |
-| `just features`  | `cargo hack` — powerset (90 kombinatsiya) + har feature alohida test           |
+| `just features`  | `cargo hack` — powerset + har feature alohida test                            |
 | `just msrv`      | 1.85 (sqlx'siz) va 1.94 (`--all-features`) pollari                             |
 | `just semver`    | tanlangan versiya bump'i o'zgarishlarni qoplaydimi                             |
 | `just semver-detail` | aynan **nima** breaking ekanini ko'rsatadi — CHANGELOG yozishdan oldin     |

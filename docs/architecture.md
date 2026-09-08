@@ -282,8 +282,8 @@ strict chaqiruv bilan qo'llanadi.
 ### 4.6. SQLx
 
 `sqlx-0_8` / `sqlx-0_9` feature'lari `Type<DB>`, `Encode<'q, DB>` va `Decode<'r, DB>`ni
-yoqadi (`sqlx` va `sqlx-postgres` — 0.9 uchun moslik aliaslari).
-Faqat `sqlx-postgres` qo'shimcha `PgHasArrayType`ni beradi; bu Postgres
+yoqadi. `sqlx-0_8-postgres` / `sqlx-0_9-postgres` mos SQLx liniyasining PostgreSQL
+driverini va qo'shimcha `PgHasArrayType`ni beradi; bu Postgres
 `Vec<T>` va `= ANY($1)` kabi ishlatishlari uchun kerak. Umumiy uch trait
 `DB: Database` orqali driver-agnostic.
 
@@ -349,7 +349,7 @@ To'rtta tip `string_newtype!`dan chiqqani uchun quyidagi umumiy sirtga ega:
 | O'qish/chiqish | `#[inline] #[must_use]` accessorlar `as_str()`, `into_inner()`; `From<Self> for String`, `Display` |
 | Borrow qilish | `AsRef<str>`, `Borrow<str>`; `HashMap<T, _>::get("...")` ishlaydi |
 | Serde | `serde` ostida `Serialize` va smart-constructor orqali `Deserialize` |
-| SQLx | `sqlx` ostida `Type/Encode/Decode`; `sqlx-postgres` ostida `PgHasArrayType` |
+| SQLx | `sqlx-0_8` / `sqlx-0_9` ostida `Type/Encode/Decode`; mos `sqlx-0_8-postgres` / `sqlx-0_9-postgres` ostida `PgHasArrayType` |
 
 Tipga xos sirt:
 
@@ -498,18 +498,21 @@ DB yoki xotirani tozalash imkoniyatlari alohida tanlanadi.
 
 | Feature | Default | Nima beradi | Dependency bog'lanishi |
 | --- | --- | --- | --- |
-| `date` | Ha | `BirthDate`, `DateFormat`, `Pinfl::birth_date*` | `chrono` va, `sqlx` ham yoqilgan bo'lsa, `sqlx?/chrono` |
-| `id` | Ha | `Id`, `NumId`, `NumIdRepr`, `IdError` | `uuid` va, `sqlx` ham yoqilgan bo'lsa, `sqlx?/uuid` |
+| `date` | Ha | `BirthDate`, `DateFormat`, `Pinfl::birth_date*` | `chrono`, yoqilgan SQLx dependency'lariga `sqlx-0_8?/chrono` va `sqlx-0_9?/chrono` |
+| `id` | Ha | `Id`, `NumId`, `NumIdRepr`, `IdError` | `uuid`, yoqilgan SQLx dependency'lariga `sqlx-0_8?/uuid` va `sqlx-0_9?/uuid` |
 | `serde` | Yo'q | Oddiy tiplar uchun Serde; sirlar uchun faqat `Deserialize` | `serde`, mavjud `uuid` uchun `uuid?/serde` |
-| `sqlx` | Yo'q | Driver-agnostic `Type/Encode/Decode` | `sqlx`; DB driverini o'zi tanlamaydi |
-| `sqlx-postgres` | Yo'q | `sqlx` + Postgres `PgHasArrayType` | `sqlx` va `sqlx/postgres` |
+| `sqlx-0_8` | Yo'q | SQLx 0.8 uchun driver-agnostic `Type/Encode/Decode` | `sqlx-0_8`; DB driverini o'zi tanlamaydi |
+| `sqlx-0_8-postgres` | Yo'q | `sqlx-0_8` + Postgres `PgHasArrayType` | `sqlx-0_8` va `sqlx-0_8/postgres` |
+| `sqlx-0_9` | Yo'q | SQLx 0.9 uchun driver-agnostic `Type/Encode/Decode` | `sqlx-0_9`; DB driverini o'zi tanlamaydi |
+| `sqlx-0_9-postgres` | Yo'q | `sqlx-0_9` + Postgres `PgHasArrayType` | `sqlx-0_9` va `sqlx-0_9/postgres` |
 | `zeroize` | Yo'q | Sirlarni drop va rad etilgan owned buferda best-effort tozalash | `zeroize` |
 | `serialize-secrets` | Yo'q | Uch sir tipi uchun `Serialize` | `serde`ni yoqadi |
 
-`date`dagi `sqlx?/chrono` va `id`dagi `sqlx?/uuid` shartli uzatishdir:
-`sqlx` yoqilmagan bo'lsa ular o'zlari uni yoqmaydi. Sir `Serialize`si oddiy
-`serde` bilan paydo bo'lmaydi. Public feature nomlari 1.0 gacha moslik sirtining qismi
-sifatida qulflangan.
+`date`dagi `sqlx-0_8?/chrono` / `sqlx-0_9?/chrono` va `id`dagi
+`sqlx-0_8?/uuid` / `sqlx-0_9?/uuid` shartli uzatishdir: faqat yoqilgan SQLx
+dependency'siga qo'shimcha imkoniyat uzatiladi; o'chiq liniya o'z-o'zidan yoqilmaydi.
+Sir `Serialize`si oddiy `serde` bilan paydo bo'lmaydi. Public feature nomlari 1.0 gacha
+moslik sirtining qismi sifatida qulflangan.
 
 ### Ikki MSRV poli
 
@@ -689,7 +692,7 @@ regressiya testi bilan hujjatlashtiriladi.
 
 ## 10. Qo'shimcha reference
 
-Release tayyorgarligidagi package versiyasi `0.25.0`, Rust editioni 2024. Manifestdagi
+Release tayyorgarligidagi package versiyasi `0.26.0`, Rust editioni 2024. Manifestdagi
 umumiy `rust-version` 1.85; `sqlx-0_9` bilan amaliy pol §6 da ko'rsatilganidek 1.94,
 `sqlx-0_8` bilan esa lockfile resolve'iga qarab 1.85–1.88.
 

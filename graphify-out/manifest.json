@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "src/lib.rs": {
-    "mtime": 1788793152.6808763,
-    "seen": 1788794509.690018,
-    "ast_hash": "3ed97749dcd0065ad9ee9d380a8e210b",
+    "mtime": 1788857522.0945625,
+    "seen": 1788858447.628238,
+    "ast_hash": "92dec23820f58920aa6f663ab7cf2379",
     "semantic_hash": ""
   },
   "src/macros.rs": {

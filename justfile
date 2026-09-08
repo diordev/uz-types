@@ -56,15 +56,15 @@ fmt-check:
 doc-check:
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
 
-# powerset: 90 kombinatsiya (~46s) — kompilyatsiya teshiklarini tutadi.
-# each-feature: 10 kombinatsiya (~8s) — feature ortidagi doctest/testlarni tutadi.
+# powerset — feature kombinatsiyalaridagi kompilyatsiya teshiklarini tutadi.
+# each-feature — har bir feature ortidagi doctest/testlarni tutadi.
 # Ro'yxat Cargo.toml dan olinadi — qo'lda yozilmaydi, yangi feature avtomatik tushadi.
 # Feature kombinatsiyalari bo'yicha check va test
 features:
     @command -v cargo-hack >/dev/null || { echo "kerak: cargo install cargo-hack"; exit 1; }
     cargo hack check --feature-powerset --all-targets \
         --group-features sqlx-0_8,sqlx-0_8-postgres \
-        --group-features sqlx-0_9,sqlx-0_9-postgres,sqlx,sqlx-postgres
+        --group-features sqlx-0_9,sqlx-0_9-postgres
     cargo hack test --each-feature
 
 # `--allow-dirty`: `ci` commit'dan OLDIN ishlatiladi, `cargo package` esa toza tree

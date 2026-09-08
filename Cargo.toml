@@ -1,6 +1,6 @@
 [package]
 name = "uz-types"
-version = "0.25.0"
+version = "0.26.0"
 authors = ["Diyorbek Abdumutalibov <diordev@icloud.com>"]
 license = "MIT OR Apache-2.0"
 description = "Rust loyihalar uchun qayta ishlatiladigan type, value object va domain model'lar kutubxonasi."
@@ -42,10 +42,6 @@ sqlx-0_9 = ["dep:sqlx-0_9"]
 sqlx-0_9-postgres = ["sqlx-0_9", "sqlx-0_9/postgres"]
 sqlx-0_8 = ["dep:sqlx-0_8"]
 sqlx-0_8-postgres = ["sqlx-0_8", "sqlx-0_8/postgres"]
-
-# Moslik aliaslari — 0.23.0 va undan oldingi nomlar eng yangi liniyaga ishora qiladi.
-sqlx = ["sqlx-0_9"]
-sqlx-postgres = ["sqlx-0_9-postgres"]
 
 [dependencies]
 thiserror = "2"
